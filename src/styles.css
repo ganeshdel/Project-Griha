@@ -1543,6 +1543,70 @@ h1, h2, h3, h4 { font-family: 'Syne', sans-serif; letter-spacing: -.03em; line-h
 .ac-remove:hover { background: rgba(255,85,85,.12); }
 
 /* ═══════════════════════════════════════════════════════════════
+   PRIVACY / CONSENT (DPDP) · SHELLY LIVE CONNECT · i18n
+   ═══════════════════════════════════════════════════════════════ */
+
+.lang-note {
+  margin: 12px 0 2px; padding: 9px 12px; border-radius: 12px;
+  background: rgba(127,166,255,.08); border: 1px solid rgba(127,166,255,.2);
+  font-size: 11.5px; color: rgba(255,255,255,.6);
+}
+.privacy-entry {
+  width: 100%; border-radius: 16px; padding: 14px 16px;
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  cursor: pointer; margin-bottom: 14px; transition: transform .15s;
+}
+.privacy-entry:hover { transform: scale(1.01); }
+.privacy-entry > span:first-child { font-size: 18px; }
+.privacy-entry div { flex: 1; }
+.privacy-entry b { display: block; font-size: 13px; }
+.privacy-entry em { display: block; font-style: normal; font-size: 11px; color: rgba(255,255,255,.42); margin-top: 2px; }
+
+.consent-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 0; border-top: 1px solid rgba(255,255,255,.07);
+}
+.consent-info { flex: 1; min-width: 0; }
+.consent-info b { display: block; font-size: 14px; }
+.consent-info span { display: block; font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+.consent-info em { display: block; font-style: normal; font-size: 10.5px; color: rgba(255,255,255,.34); margin-top: 4px; }
+.toggle {
+  width: 46px; height: 26px; border-radius: 999px; flex-shrink: 0;
+  background: rgba(255,255,255,.12); position: relative;
+  transition: background .2s; border: 1px solid rgba(255,255,255,.1);
+}
+.toggle .knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform .2s cubic-bezier(.4,0,.2,1);
+}
+.toggle.on { background: var(--accent); border-color: transparent; }
+.toggle.on .knob { transform: translateX(20px); }
+.privacy-links {
+  margin: 16px 0 12px; padding: 14px; border-radius: 14px;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+}
+.privacy-links p { font-size: 12px; margin-bottom: 8px; }
+.privacy-links p:last-child { margin-bottom: 0; }
+.danger-btn { border-color: rgba(255,85,85,.3); color: rgba(255,120,120,.9); }
+.danger-btn:hover { background: rgba(255,85,85,.08); }
+
+.shelly-connect {
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.08);
+}
+.shelly-connect h3 { font-size: 15px; margin-bottom: 6px; }
+.shelly-connect code {
+  font-size: 11px; background: rgba(255,255,255,.08); padding: 1px 5px; border-radius: 6px;
+}
+.shelly-field { margin: 8px 0; font-size: 14px; }
+.shelly-result {
+  margin-top: 12px; padding: 12px; border-radius: 12px; font-size: 13px;
+}
+.shelly-result.ok { background: rgba(47,203,163,.1); border: 1px solid rgba(47,203,163,.3); color: #7fe7cd; }
+.shelly-result.ok b { color: #2FCBA3; }
+.shelly-result.err { background: rgba(255,85,85,.08); border: 1px solid rgba(255,85,85,.25); color: #ffb0b0; }
+
+/* ═══════════════════════════════════════════════════════════════
    BUSINESS MODE
    ═══════════════════════════════════════════════════════════════ */
 

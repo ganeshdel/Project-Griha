@@ -98,6 +98,22 @@ const LANGUAGES = [
   ['Punjabi','ਪੰਜਾਬੀ'],['Odia','ଓଡ଼ିਆ']
 ];
 
+// ── Interface translations (core chrome; coach content ships after native review) ──
+// Keys stay in English; missing keys fall back to English.
+const I18N = {
+  Hindi: { nav_home:'होम', nav_guard:'गार्ड', nav_history:'इतिहास', nav_coach:'कोच', hes:'गृह दक्षता स्कोर', bill_to_date:'अब तक का अनुमानित बिल', days_left:'{n} दिन शेष', pay:'भुगतान करें', breakdown:'खपत का विश्लेषण', trend:'12 महीने का बिल रुझान', modules:'होम मॉड्यूल', cont:'आगे बढ़ें →', hi:'नमस्ते', save_line:'{amt}/वर्ष बचाएँ', score_good:'अच्छा · कूलिंग में सुधार की गुंजाइश', guard_title:'इस चक्र में आप अगले स्लैब को पार कर सकते हैं।', m_units:'यूनिट खपत', m_days:'दिन शेष', m_proj:'अनुमानित कुल', m_thresh:'सीमा तक यूनिट' },
+  Tamil: { nav_home:'முகப்பு', nav_guard:'காப்பு', nav_history:'வரலாறு', nav_coach:'கோச்', hes:'வீட்டு திறன் மதிப்பெண்', bill_to_date:'இதுவரை மதிப்பிடப்பட்ட பில்', days_left:'{n} நாட்கள் மீதம்', pay:'செலுத்து', breakdown:'நுகர்வு பகுப்பாய்வு', trend:'12 மாத பில் போக்கு', modules:'வீட்டு தொகுதிகள்', cont:'தொடரவும் →', hi:'வணக்கம்', save_line:'ஆண்டுக்கு {amt} சேமிக்கலாம்', score_good:'நன்று · குளிரூட்டலில் மேம்பாடு சாத்தியம்', guard_title:'இந்த சுழற்சியில் அடுத்த அடுக்கை நீங்கள் கடக்கக்கூடும்.', m_units:'யூனிட் நுகர்வு', m_days:'நாட்கள் மீதம்', m_proj:'எதிர்பார்க்கும் மொத்தம்', m_thresh:'வரம்பிற்கு யூனிட்கள்' },
+  Telugu: { nav_home:'హోమ్', nav_guard:'గార్డ్', nav_history:'చరిత్ర', nav_coach:'కోచ్', hes:'ఇంటి సామర్థ్య స్కోరు', bill_to_date:'ఇప్పటివరకు అంచనా బిల్లు', days_left:'{n} రోజులు మిగిలాయి', pay:'చెల్లించండి', breakdown:'వినియోగ విశ్లేషణ', trend:'12 నెలల బిల్లు ధోరణి', modules:'హోమ్ మాడ్యూళ్లు', cont:'కొనసాగించండి →', hi:'నమస్కారం', save_line:'సంవత్సరానికి {amt} ఆదా', score_good:'బాగుంది · కూలింగ్‌లో మెరుగుదల అవకాశం', guard_title:'ఈ సైకిల్‌లో మీరు తదుపరి స్లాబ్ దాటవచ్చు.', m_units:'యూనిట్ల వినియోగం', m_days:'రోజులు మిగిలాయి', m_proj:'అంచనా మొత్తం', m_thresh:'పరిమితికి యూనిట్లు' },
+  Kannada: { nav_home:'ಹೋಮ್', nav_guard:'ಗಾರ್ಡ್', nav_history:'ಇತಿಹಾಸ', nav_coach:'ಕೋಚ್', hes:'ಮನೆ ದಕ್ಷತೆ ಸ್ಕೋರ್', bill_to_date:'ಇದುವರೆಗಿನ ಅಂದಾಜು ಬಿಲ್', days_left:'{n} ದಿನಗಳು ಬಾಕಿ', pay:'ಪಾವತಿಸಿ', breakdown:'ಬಳಕೆ ವಿಶ್ಲೇಷಣೆ', trend:'12 ತಿಂಗಳ ಬಿಲ್ ಪ್ರವೃತ್ತಿ', modules:'ಹೋಮ್ ಮಾಡ್ಯೂಲ್‌ಗಳು', cont:'ಮುಂದುವರಿಸಿ →', hi:'ನಮಸ್ಕಾರ', save_line:'ವರ್ಷಕ್ಕೆ {amt} ಉಳಿತಾಯ', score_good:'ಚೆನ್ನಾಗಿದೆ · ಕೂಲಿಂಗ್ ಸುಧಾರಿಸಬಹುದು', guard_title:'ಈ ಚಕ್ರದಲ್ಲಿ ನೀವು ಮುಂದಿನ ಸ್ಲ್ಯಾಬ್ ದಾಟಬಹುದು.', m_units:'ಯೂನಿಟ್ ಬಳಕೆ', m_days:'ದಿನಗಳು ಬಾಕಿ', m_proj:'ಅಂದಾಜು ಒಟ್ಟು', m_thresh:'ಮಿತಿಗೆ ಯೂನಿಟ್‌ಗಳು' },
+  Malayalam: { nav_home:'ഹോം', nav_guard:'ഗാർഡ്', nav_history:'ചരിത്രം', nav_coach:'കോച്ച്', hes:'വീടിന്റെ കാര്യക്ഷമതാ സ്കോർ', bill_to_date:'ഇതുവരെയുള്ള ഏകദേശ ബിൽ', days_left:'{n} ദിവസം ബാക്കി', pay:'അടയ്ക്കുക', breakdown:'ഉപഭോഗ വിശകലനം', trend:'12 മാസത്തെ ബിൽ പ്രവണത', modules:'ഹോം മൊഡ്യൂളുകൾ', cont:'തുടരുക →', hi:'നമസ്കാരം', save_line:'വർഷം {amt} ലാഭിക്കാം', score_good:'നല്ലത് · കൂളിംഗിൽ മെച്ചപ്പെടുത്താം', guard_title:'ഈ സൈക്കിളിൽ അടുത്ത സ്ലാബ് കടന്നേക്കാം.', m_units:'യൂണിറ്റ് ഉപഭോഗം', m_days:'ദിവസം ബാക്കി', m_proj:'പ്രതീക്ഷിത ആകെ', m_thresh:'പരിധി വരെ യൂണിറ്റ്' },
+  Marathi: { nav_home:'होम', nav_guard:'गार्ड', nav_history:'इतिहास', nav_coach:'कोच', hes:'गृह कार्यक्षमता गुण', bill_to_date:'आतापर्यंतचे अंदाजे बिल', days_left:'{n} दिवस शिल्लक', pay:'भरा', breakdown:'वापराचे विश्लेषण', trend:'१२ महिन्यांचा बिल कल', modules:'होम मॉड्यूल्स', cont:'पुढे जा →', hi:'नमस्कार', save_line:'वर्षाला {amt} बचत', score_good:'चांगले · कूलिंगमध्ये सुधारणा शक्य', guard_title:'या चक्रात तुम्ही पुढील स्लॅब ओलांडू शकता.', m_units:'युनिट वापर', m_days:'दिवस शिल्लक', m_proj:'अंदाजित एकूण', m_thresh:'मर्यादेपर्यंत युनिट्स' },
+  Bengali: { nav_home:'হোম', nav_guard:'গার্ড', nav_history:'ইতিহাস', nav_coach:'কোচ', hes:'বাড়ির দক্ষতা স্কোর', bill_to_date:'এখন পর্যন্ত আনুমানিক বিল', days_left:'{n} দিন বাকি', pay:'পরিশোধ করুন', breakdown:'ব্যবহারের বিশ্লেষণ', trend:'১২ মাসের বিলের প্রবণতা', modules:'হোম মডিউল', cont:'এগিয়ে যান →', hi:'নমস্কার', save_line:'বছরে {amt} সাশ্রয়', score_good:'ভালো · কুলিং-এ উন্নতির সুযোগ', guard_title:'এই চক্রে আপনি পরবর্তী স্ল্যাব অতিক্রম করতে পারেন।', m_units:'ইউনিট ব্যবহার', m_days:'দিন বাকি', m_proj:'আনুমানিক মোট', m_thresh:'সীমা পর্যন্ত ইউনিট' },
+  Gujarati: { nav_home:'હોમ', nav_guard:'ગાર્ડ', nav_history:'ઇતિહાસ', nav_coach:'કોચ', hes:'ઘર કાર્યક્ષમતા સ્કોર', bill_to_date:'અત્યાર સુધીનું અંદાજિત બિલ', days_left:'{n} દિવસ બાકી', pay:'ચૂકવો', breakdown:'વપરાશ વિશ્લેષણ', trend:'12 મહિનાનો બિલ ટ્રેન્ડ', modules:'હોમ મોડ્યુલ્સ', cont:'આગળ વધો →', hi:'નમસ્તે', save_line:'વર્ષે {amt} બચત', score_good:'સારું · કૂલિંગમાં સુધારો શક્ય', guard_title:'આ ચક્રમાં તમે આગળનો સ્લેબ પાર કરી શકો છો.', m_units:'યુનિટ વપરાશ', m_days:'દિવસ બાકી', m_proj:'અંદાજિત કુલ', m_thresh:'મર્યાદા સુધી યુનિટ' },
+  Punjabi: { nav_home:'ਹੋਮ', nav_guard:'ਗਾਰਡ', nav_history:'ਇਤਿਹਾਸ', nav_coach:'ਕੋਚ', hes:'ਘਰ ਕੁਸ਼ਲਤਾ ਸਕੋਰ', bill_to_date:'ਹੁਣ ਤੱਕ ਦਾ ਅੰਦਾਜ਼ਨ ਬਿੱਲ', days_left:'{n} ਦਿਨ ਬਾਕੀ', pay:'ਭੁਗਤਾਨ ਕਰੋ', breakdown:'ਖਪਤ ਵਿਸ਼ਲੇਸ਼ਣ', trend:'12 ਮਹੀਨਿਆਂ ਦਾ ਬਿੱਲ ਰੁਝਾਨ', modules:'ਹੋਮ ਮੋਡੀਊਲ', cont:'ਅੱਗੇ ਵਧੋ →', hi:'ਸਤ ਸ੍ਰੀ ਅਕਾਲ', save_line:'ਸਾਲਾਨਾ {amt} ਬਚਤ', score_good:'ਚੰਗਾ · ਕੂਲਿੰਗ ਵਿੱਚ ਸੁਧਾਰ ਸੰਭਵ', guard_title:'ਇਸ ਚੱਕਰ ਵਿੱਚ ਤੁਸੀਂ ਅਗਲਾ ਸਲੈਬ ਪਾਰ ਕਰ ਸਕਦੇ ਹੋ।', m_units:'ਯੂਨਿਟ ਖਪਤ', m_days:'ਦਿਨ ਬਾਕੀ', m_proj:'ਅੰਦਾਜ਼ਨ ਕੁੱਲ', m_thresh:'ਹੱਦ ਤੱਕ ਯੂਨਿਟ' },
+  Odia: { nav_home:'ହୋମ୍', nav_guard:'ଗାର୍ଡ', nav_history:'ଇତିହାସ', nav_coach:'କୋଚ୍', hes:'ଘର ଦକ୍ଷତା ସ୍କୋର', bill_to_date:'ଏପର୍ଯ୍ୟନ୍ତ ଆନୁମାନିକ ବିଲ୍', days_left:'{n} ଦିନ ବାକି', pay:'ପଇଠ କରନ୍ତୁ', breakdown:'ବ୍ୟବହାର ବିଶ୍ଳେଷଣ', trend:'12 ମାସର ବିଲ୍ ଧାରା', modules:'ହୋମ୍ ମଡ୍ୟୁଲ୍', cont:'ଆଗକୁ ବଢ଼ନ୍ତୁ →', hi:'ନମସ୍କାର', save_line:'ବର୍ଷକୁ {amt} ସଞ୍ଚୟ', score_good:'ଭଲ · କୁଲିଂରେ ଉନ୍ନତି ସମ୍ଭବ', guard_title:'ଏହି ଚକ୍ରରେ ଆପଣ ପରବର୍ତ୍ତୀ ସ୍ଲାବ୍ ପାର କରିପାରନ୍ତି।', m_units:'ୟୁନିଟ୍ ବ୍ୟବହାର', m_days:'ଦିନ ବାକି', m_proj:'ଆନୁମାନିକ ମୋଟ', m_thresh:'ସୀମା ପର୍ଯ୍ୟନ୍ତ ୟୁନିଟ୍' }
+};
+const I18N_EN = { nav_home:'Home', nav_guard:'Guard', nav_history:'History', nav_coach:'Coach', hes:'Home Efficiency Score', bill_to_date:'Estimated bill to date', days_left:'{n} days left', pay:'Pay', breakdown:'Consumption breakdown', trend:'12-month bill trend', modules:'Home modules', cont:'Continue →', hi:'Hi', save_line:'Save {amt}/year', score_good:'Good · room to improve cooling', guard_title:'You may cross the next slab this cycle.', m_units:'units consumed', m_days:'days remaining', m_proj:'projected total', m_thresh:'units to threshold' };
+
 const MODULES = [
   { name: 'Electricity', icon: '⚡', active: true },
   { name: 'Water', icon: '💧', active: false },
@@ -330,13 +346,28 @@ const S = {
   bizEmail: '',
   bizDone: false,
 
+  // DPDP consent registry — each category independently granted/revocable
+  consents: {
+    billing:   { label: 'Billing history fetch', desc: 'Read-only import of your DISCOM billing history', on: true,  ts: '14/05/2026 10:22', ver: 'v1.2' },
+    ocr:       { label: 'Bill photo processing', desc: 'OCR extraction from uploaded bill images', on: false, ts: '—', ver: 'v1.2' },
+    appliance: { label: 'Appliance inventory', desc: 'Storage of your per-unit appliance records', on: true,  ts: '14/05/2026 10:24', ver: 'v1.2' },
+    locality:  { label: 'Locality data', desc: 'Neighbourhood-level peer benchmarking', on: true,  ts: '14/05/2026 10:23', ver: 'v1.2' },
+    payment:   { label: 'Payment processing', desc: 'BBPS bill payment via licensed aggregator', on: true,  ts: '14/05/2026 10:25', ver: 'v1.2' },
+    whatsapp:  { label: 'WhatsApp communication', desc: 'Alerts and summaries on WhatsApp', on: false, ts: '—', ver: 'v1.2' }
+  },
+
   // Personal-mode hardware (Path B)
   devices: [
     { name: 'Shelly EM — Bedroom AC circuit', type: 'CT clamp · ±2%', online: true },
     { name: 'Qubo smart plug — Geyser', type: 'Smart plug · ±2%', online: true }
   ],
   pairing: false,
-  pairStep: 0
+  pairStep: 0,
+
+  // Live Shelly connect (self-test): credentials kept in localStorage only
+  shelly: { proxy: '', server: '', deviceId: '', authKey: '' },
+  shellyBusy: false,
+  shellyResult: null
 };
 
 let _otpTimer = null;
@@ -354,6 +385,12 @@ const root = document.getElementById('root');
 
 function inr(v) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
+}
+
+function t(key, vars) {
+  let s = (I18N[S.language] && I18N[S.language][key]) || I18N_EN[key] || key;
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, v);
+  return s;
 }
 
 function arc(val, sz = 154, sw = 11, color = 'var(--accent)') {
@@ -1086,6 +1123,7 @@ function screenApp() {
   const c = appCity();
   const tabFns = { Home: tabHome, 'Tariff Guard': tabTariffGuard, History: tabHistory, Coach: tabCoach };
   const ICONS = { Home: '⌂', 'Tariff Guard': '◈', History: '▥', Coach: '✦' };
+  const TABKEYS = { Home: 'nav_home', 'Tariff Guard': 'nav_guard', History: 'nav_history', Coach: 'nav_coach' };
 
   return `
   <div class="app-shell" style="--primary:${c.primary};--accent:${c.accent}">
@@ -1100,15 +1138,18 @@ function screenApp() {
         </div>
       </div>
       <nav class="sidebar-nav">
-        ${['Home','Tariff Guard','History','Coach'].map(t => `
-          <button class="snav-item${S.tab === t ? ' active' : ''}" data-tab="${t}">
-            <span class="snav-icon">${ICONS[t]}</span>
-            <span>${t}</span>
-            ${t === 'Tariff Guard' && S.alertActive ? '<span class="snav-dot"></span>' : ''}
+        ${['Home','Tariff Guard','History','Coach'].map(tb => `
+          <button class="snav-item${S.tab === tb ? ' active' : ''}" data-tab="${tb}">
+            <span class="snav-icon">${ICONS[tb]}</span>
+            <span>${t(TABKEYS[tb])}</span>
+            ${tb === 'Tariff Guard' && S.alertActive ? '<span class="snav-dot"></span>' : ''}
           </button>
         `).join('')}
       </nav>
       <div class="sidebar-footer">
+        <button class="snav-item" data-sheet="privacy">
+          <span class="snav-icon">🛡</span><span>Privacy & consent</span>
+        </button>
         <div class="city-switcher">
           ${Object.entries(CITIES).map(([name, cd]) => `
             <button class="csw-btn${S.profileCity === name ? ' active' : ''}" data-switchcity="${name}"
@@ -1123,12 +1164,12 @@ function screenApp() {
       <div class="phone-frame">
         <header class="app-header" style="background:linear-gradient(180deg,${c.primary}3a 0%,transparent 100%)">
           <div class="hdr-left">
-            <div class="hdr-greeting">Hi ${S.profileName}</div>
+            <div class="hdr-greeting">${t('hi')} ${S.profileName}</div>
             <div class="hdr-city">${S.profileCity} · ${c.discom}</div>
           </div>
           <div class="hdr-right">
             <div class="hdr-bill-amt">${inr(S.billToDate)}</div>
-            <div class="hdr-bill-lbl">est. this cycle · ${S.daysLeft}d left</div>
+            <div class="hdr-bill-lbl">est. · ${t('days_left', { n: S.daysLeft })}</div>
           </div>
         </header>
 
@@ -1145,11 +1186,11 @@ function screenApp() {
         </div>
 
         <nav class="bottom-nav glass">
-          ${['Home','Tariff Guard','History','Coach'].map(t => `
-            <button class="bnav-item${S.tab === t ? ' active' : ''}" data-tab="${t}">
-              <span class="bnav-icon">${ICONS[t]}</span>
-              <span class="bnav-label">${t === 'Tariff Guard' ? 'Guard' : t}</span>
-              ${t === 'Tariff Guard' && S.alertActive ? '<span class="bnav-dot"></span>' : ''}
+          ${['Home','Tariff Guard','History','Coach'].map(tb => `
+            <button class="bnav-item${S.tab === tb ? ' active' : ''}" data-tab="${tb}">
+              <span class="bnav-icon">${ICONS[tb]}</span>
+              <span class="bnav-label">${t(TABKEYS[tb])}</span>
+              ${tb === 'Tariff Guard' && S.alertActive ? '<span class="bnav-dot"></span>' : ''}
             </button>
           `).join('')}
         </nav>
@@ -1177,14 +1218,17 @@ function tabHome() {
   const pts = reversed.map((b, i) => `${(i/11)*100},${85-(b.amount/max)*72}`).join(' ');
 
   return `<div class="tab-scroll">
+    ${S.language !== 'English' ? `
+      <div class="lang-note slide-up">🌐 ${S.language} interface preview — coach messages ship after native review.</div>
+    ` : ''}
     <!-- Bill due card -->
     <div class="bill-card glass slide-up">
       <div class="bill-card-left">
-        <div class="eyebrow">Estimated bill to date · est. <button class="info-btn" data-sheet="est-info">ⓘ</button></div>
+        <div class="eyebrow">${t('bill_to_date')} · est. <button class="info-btn" data-sheet="est-info">ⓘ</button></div>
         <div class="bill-big">${inr(S.billToDate)}</div>
-        <div class="bill-meta">${S.units} units · ${S.daysLeft} days left</div>
+        <div class="bill-meta">${S.units} units · ${t('days_left', { n: S.daysLeft })}</div>
       </div>
-      <button class="pay-btn" data-sheet="pay">Pay ₹4,680</button>
+      <button class="pay-btn" data-sheet="pay">${t('pay')} ₹4,680</button>
     </div>
 
     <!-- Score card -->
@@ -1194,9 +1238,9 @@ function tabHome() {
         <div class="score-num">74</div>
       </div>
       <div class="score-info">
-        <div class="eyebrow">Home Efficiency Score</div>
-        <div class="score-line">Good · room to improve cooling</div>
-        <div class="score-save">Save <strong>${inr(18200)}/year</strong></div>
+        <div class="eyebrow">${t('hes')}</div>
+        <div class="score-line">${t('score_good')}</div>
+        <div class="score-save">${t('save_line', { amt: `<strong>${inr(18200)}</strong>` })}</div>
         <div class="score-rank">Top 43% of ${S.profileCity} 3 BHK flats</div>
       </div>
     </button>
@@ -1204,7 +1248,7 @@ function tabHome() {
     <!-- Consumption breakdown: measured (hardware) vs estimated (inventory) -->
     <div class="card glass slide-up">
       <div class="card-hdr">
-        <h3>Consumption breakdown</h3>
+        <h3>${t('breakdown')}</h3>
         <button class="info-btn" data-sheet="est-info">ⓘ methodology</button>
       </div>
       ${[
@@ -1238,7 +1282,7 @@ function tabHome() {
     <!-- Trend + quick stats -->
     <div class="card glass slide-up">
       <div class="card-hdr">
-        <h3>12-month bill trend</h3>
+        <h3>${t('trend')}</h3>
         <span class="data-src-badge">DISCOM import</span>
       </div>
       <svg class="sparkline" viewBox="0 0 100 90" preserveAspectRatio="none">
@@ -1267,7 +1311,7 @@ function tabHome() {
     <!-- Modules grid -->
     <div class="card glass slide-up">
       <div class="card-hdr">
-        <h3>Home modules</h3>
+        <h3>${t('modules')}</h3>
         <span class="platform-badge">Platform roadmap</span>
       </div>
       <div class="modules-grid">
@@ -1282,6 +1326,13 @@ function tabHome() {
         `).join('')}
       </div>
     </div>
+
+    <!-- Privacy entry (DPDP) -->
+    <button class="privacy-entry glass slide-up" data-sheet="privacy">
+      <span>🛡</span>
+      <div><b>Privacy & consent</b><em>6 consent categories · DPDP Act 2023 · independently revocable</em></div>
+      <span class="hw-card-cta">→</span>
+    </button>
   </div>`;
 }
 
@@ -1301,12 +1352,12 @@ function tabTariffGuard() {
         <span class="status-badge warn">⚠ Warning</span>
         <span class="guard-cycle">1 May – 30 Jun 2026</span>
       </div>
-      <h2>You may cross the next slab this cycle.</h2>
+      <h2>${t('guard_title')}</h2>
       <div class="guard-metrics">
-        <div class="gm"><b>${S.units}</b><span>units consumed</span></div>
-        <div class="gm"><b>${S.daysLeft}</b><span>days remaining</span></div>
-        <div class="gm"><b>${S.projected}</b><span>projected total</span></div>
-        <div class="gm"><b>${S.projected - thresh}</b><span>units to threshold</span></div>
+        <div class="gm"><b>${S.units}</b><span>${t('m_units')}</span></div>
+        <div class="gm"><b>${S.daysLeft}</b><span>${t('m_days')}</span></div>
+        <div class="gm"><b>${S.projected}</b><span>${t('m_proj')}</span></div>
+        <div class="gm"><b>${S.projected - thresh}</b><span>${t('m_thresh')}</span></div>
       </div>
       <div class="impact-box">Crossing this slab adds about <strong>₹640</strong> — TANGEDCO reprices marginal units at the higher rate.</div>
     </div>
@@ -1686,6 +1737,26 @@ function sheets(c) {
     <button class="btn-primary" data-sheet="devices">See my devices →</button>
     <button class="btn-ghost btn-full" data-close>Understood</button>`);
 
+  if (S.sheet === 'privacy') return wrap(`
+    <h2>Privacy & consent</h2>
+    <p>DPDP Act 2023: each data category has its own consent, recorded with a timestamp and notice version, and independently revocable. Revoking stops processing for that category without affecting the rest.</p>
+    ${Object.entries(S.consents).map(([k, cs]) => `
+      <div class="consent-row">
+        <div class="consent-info">
+          <b>${cs.label}</b>
+          <span>${cs.desc}</span>
+          <em>${cs.on ? `Granted ${cs.ts} · notice ${cs.ver}` : 'Not granted'}</em>
+        </div>
+        <button class="toggle${cs.on ? ' on' : ''}" data-consent="${k}"><span class="knob"></span></button>
+      </div>
+    `).join('')}
+    <div class="privacy-links">
+      <p><strong>Your rights:</strong> access, correction, erasure, and grievance redressal under the DPDP Act 2023.</p>
+      <p><strong>Grievance officer:</strong> grievance@griha.app · response within 7 days.</p>
+      <p><strong>Data:</strong> encrypted at rest (AES-256) and in transit (TLS 1.3). Deleting your account erases all personal data within 30 days.</p>
+    </div>
+    <button class="btn-ghost btn-full danger-btn">Delete my account & data</button>`);
+
   if (S.sheet === 'devices') return wrap(`
     <h2>Your hardware</h2>
     <p>Griha is a hardware-software combination. Sensors turn ±20–30% estimates into ±2% measurements — circuit by circuit.</p>
@@ -1726,7 +1797,23 @@ function sheets(c) {
           : `<button class="btn-primary btn-full" data-pairdone>Device connected ✓</button>`}
         <button class="btn-ghost btn-full" data-paircancel>Cancel</button>
       </div>
-    `}`);
+    `}
+    <div class="shelly-connect">
+      <h3>Live connect — test with your own Shelly</h3>
+      <p class="unit-hint">Enter your Shelly Cloud credentials (Shelly app → Settings → Authorization cloud key). Browsers block direct calls to Shelly Cloud, so a free relay is needed — see <code>docs/shelly-proxy-worker.js</code> in the repo for a 10-minute Cloudflare Worker setup.</p>
+      <input class="field-input shelly-field" id="shProxy" placeholder="Relay URL (your Cloudflare Worker)" value="${S.shelly.proxy}"/>
+      <input class="field-input shelly-field" id="shServer" placeholder="Shelly server, e.g. https://shelly-56-eu.shelly.cloud" value="${S.shelly.server}"/>
+      <input class="field-input shelly-field" id="shDevice" placeholder="Device ID" value="${S.shelly.deviceId}"/>
+      <input class="field-input shelly-field" id="shKey" type="password" placeholder="Cloud auth key" value="${S.shelly.authKey}"/>
+      <button class="btn-primary btn-full" data-shellytest ${S.shellyBusy ? 'disabled' : ''}>${S.shellyBusy ? 'Connecting…' : 'Test live connection'}</button>
+      ${S.shellyResult ? `
+        <div class="shelly-result ${S.shellyResult.ok ? 'ok' : 'err'}">
+          ${S.shellyResult.ok
+            ? `✓ Live! Current power: <b>${S.shellyResult.power} W</b> — this device can now feed your MEASURED circuits.`
+            : `✕ ${S.shellyResult.error}`}
+        </div>
+      ` : ''}
+    </div>`);
 
   if (S.sheet?.startsWith('products:')) {
     const cat = PRODUCTS[S.sheet.split(':')[1]];
@@ -2043,6 +2130,59 @@ function bind() {
     el.onclick = e => { e.stopPropagation(); set({ payMethod: el.dataset.pm }); };
   });
 
+  // DPDP consent toggles
+  root.querySelectorAll('[data-consent]').forEach(el => {
+    el.onclick = () => {
+      const k = el.dataset.consent;
+      const cs = { ...S.consents };
+      const now = new Date();
+      const stamp = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      cs[k] = { ...cs[k], on: !cs[k].on, ts: !cs[k].on ? stamp : cs[k].ts };
+      set({ consents: cs });
+    };
+  });
+
+  // Shelly live connect — real fetch against user's own device
+  ['shProxy','shServer','shDevice','shKey'].forEach(id => {
+    const el = root.querySelector('#' + id);
+    if (el) el.addEventListener('input', e => {
+      const map = { shProxy: 'proxy', shServer: 'server', shDevice: 'deviceId', shKey: 'authKey' };
+      S.shelly = { ...S.shelly, [map[id]]: e.target.value.trim() };
+      try { localStorage.setItem('griha_shelly', JSON.stringify(S.shelly)); } catch {}
+    });
+  });
+  root.querySelector('[data-shellytest]')?.addEventListener('click', async () => {
+    const sh = S.shelly;
+    if (!sh.deviceId || !sh.authKey || !(sh.proxy || sh.server)) {
+      set({ shellyResult: { ok: false, error: 'Fill in device ID, auth key, and a server or relay URL.' } });
+      return;
+    }
+    set({ shellyBusy: true, shellyResult: null });
+    try {
+      const base = (sh.proxy || sh.server).replace(/\/$/, '');
+      const res = await fetch(base + '/device/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `id=${encodeURIComponent(sh.deviceId)}&auth_key=${encodeURIComponent(sh.authKey)}`
+      });
+      const j = await res.json();
+      const ds = j?.data?.device_status || {};
+      // Gen1 (Shelly EM): emeters[].power · Gen2 (Plus/Pro): switch:0.apower or em:0
+      const power =
+        ds.emeters?.[0]?.power ??
+        ds['switch:0']?.apower ??
+        ds['em:0']?.total_act_power ??
+        ds.meters?.[0]?.power;
+      if (power === undefined) throw new Error('Connected, but no power reading found in response.');
+      set({ shellyBusy: false, shellyResult: { ok: true, power: Math.round(power * 10) / 10 } });
+    } catch (err) {
+      const cors = String(err).includes('Failed to fetch');
+      set({ shellyBusy: false, shellyResult: { ok: false, error: cors
+        ? 'Request blocked (CORS or network). Deploy the relay from docs/shelly-proxy-worker.js and put its URL in the Relay field.'
+        : 'Connection failed: ' + (err.message || err) } });
+    }
+  });
+
   // Device pairing wizard
   root.querySelector('[data-pairstart]')?.addEventListener('click', () => set({ pairing: true, pairStep: 0 }));
   root.querySelector('[data-pairnext]')?.addEventListener('click', () => set({ pairStep: S.pairStep + 1 }));
@@ -2110,5 +2250,10 @@ function startOtpTimer() {
 // ═══════════════════════════════════════════════════════════════
 // 17. INIT
 // ═══════════════════════════════════════════════════════════════
+
+try {
+  const saved = localStorage.getItem('griha_shelly');
+  if (saved) S.shelly = { ...S.shelly, ...JSON.parse(saved) };
+} catch {}
 
 render();
