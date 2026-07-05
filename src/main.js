@@ -142,9 +142,9 @@ const SCORE_DIMS = [
 const ROADMAP = [
   { title: 'Raise AC thermostat to 24°C', saving: '₹4,560/yr', cost: '₹0', breakeven: 'Instant', diff: 'Free',
     rationale: 'Based on two 3-star ACs running 7.5 hours/night in Velachery. Each degree above 22°C reduces runtime ~6%. Specific to your Velachery household heat-load profile.' },
-  { title: 'Replace 4 regular fans with BLDC', saving: '₹5,900/yr', cost: '₹11,200', breakeven: '23 months', diff: 'Easy',
-    rationale: 'Your fan inventory lists 4 regular (60W) fans with no BLDC units. Replacing all four with 5-star BLDC (28W each) saves ~53% fan power running at 10 hrs/day in Chennai.' },
-  { title: 'Check refrigerator door gasket', saving: '₹1,850/yr', cost: '₹1,200', breakeven: '8 months', diff: 'Easy',
+  { title: 'Replace 4 regular fans with BLDC', saving: '₹5,900/yr', cost: '₹11,200', breakeven: '23 months', diff: 'Easy', products: 'fans',
+    rationale: 'Your fan inventory lists 4 regular (75–80W) fans with no BLDC units. Replacing all four with 5-star BLDC (28–35W each) saves ~53% fan power running at 10 hrs/day in Chennai.' },
+  { title: 'Check refrigerator door gasket', saving: '₹1,850/yr', cost: '₹1,200', breakeven: '8 months', diff: 'Easy', products: 'gasket',
     rationale: 'Your frost-free 260–350L fridge shows harder cycling in Chennai summers — a classic gasket-wear signal. Minimal replacement cost; compressor gains account for the saving.' },
   { title: 'RWA common-area solar discussion', saving: 'Maintenance saving', cost: 'Society-led', breakeven: 'Later', diff: 'Moderate',
     rationale: 'Individual rooftop solar is suppressed for flats. Many societies in Chennai are adopting common-area solar for shared lighting, which reduces maintenance levy costs.' }
@@ -223,6 +223,44 @@ const SOCIETY_HARDWARE = [
   { name: 'Ultrasonic fuel sensor — DG tank', detail: '660 L diesel tank', online: true }
 ];
 
+// ── Personal-mode hardware (Path B: measured circuits) ──
+const AC_TONNAGES = ['1 T', '1.5 T', '2 T'];
+
+const PRODUCTS = {
+  fans: {
+    title: 'Best BLDC fans for your home',
+    context: 'Matched to your inventory: 4 regular ceiling fans, 1200 mm mount. Savings computed at your TANGEDCO marginal rate.',
+    items: [
+      { name: 'Atomberg Renesa 1200mm BLDC', spec: '28W · 5★ BEE · Remote control', price: '₹3,199', save: 'Saves ~₹1,475/yr vs your 78W fan' },
+      { name: 'Crompton Energion HS 1200mm', spec: '35W · 5★ BEE · Remote control', price: '₹3,449', save: 'Saves ~₹1,320/yr vs your 78W fan' },
+      { name: 'Havells Ambrose BLDC 1200mm', spec: '32W · 5★ BEE · Remote control', price: '₹3,650', save: 'Saves ~₹1,390/yr vs your 78W fan' }
+    ]
+  },
+  gasket: {
+    title: 'Refrigerator gasket replacement',
+    context: 'For your frost-free 260–350L refrigerator. Includes OEM-compatible gasket and doorstep fitting.',
+    items: [
+      { name: 'OEM-compatible door gasket + fitting', spec: 'Urban Company / local service', price: '₹1,100–1,400', save: 'Recovers ~₹1,850/yr in compressor efficiency' }
+    ]
+  },
+  sensors: {
+    title: 'Measurement hardware for your circuits',
+    context: 'Turns estimates into ±2% measured data. Start with your two heaviest circuits — AC and geyser.',
+    items: [
+      { name: 'Shelly EM + 50A CT clamp', spec: 'For hardwired circuits (AC, geyser) · Wi-Fi', price: '₹4,200', save: 'Makes one circuit MEASURED' },
+      { name: 'Shelly Plug S / Qubo smart plug', spec: 'For plug-in appliances up to 10A · Wi-Fi', price: '₹1,099', save: 'Makes one appliance MEASURED' },
+      { name: 'PZEM-004T DIY energy monitor', spec: 'For tinkerers · needs enclosure + electrician', price: '₹850', save: 'Budget single-circuit metering' }
+    ]
+  }
+};
+
+const PAIR_STEPS = [
+  { title: 'Choose your hardware', desc: 'CT clamp (Shelly EM) for hardwired circuits like AC and geyser, or a smart plug for plug-in appliances.' },
+  { title: 'Install at the distribution board', desc: 'An electrician clamps the CT around that circuit\'s wire — 30–45 min, live panel work. Smart plugs just plug in.' },
+  { title: 'Join your Wi-Fi', desc: 'The device pairs once with your 2.4 GHz network, then streams continuously. No further setup.' },
+  { title: 'Griha reads it live', desc: 'That circuit flips from ESTIMATED to MEASURED automatically the moment data flows.' }
+];
+
 // ═══════════════════════════════════════════════════════════════
 // 2. STATE
 // ═══════════════════════════════════════════════════════════════
@@ -255,8 +293,12 @@ const S = {
   method: null,
   cycleStart: 1,
   appliances: {
-    fans: { qty: 4, type: 'Regular (75–80W)' },
-    ac: { qty: 2, stars: 3, type: 'Inverter' },
+    // Per-unit registry (IA §1.2): every AC is an individual record; fans split by type
+    fans: { regular: 4, bldc: 0 },
+    ac: { units: [
+      { tonnage: '1.5 T', stars: 3, inv: true },
+      { tonnage: '1.5 T', stars: 3, inv: true }
+    ] },
     fridge: { present: true, stars: 3, type: 'Frost-Free' },
     washer: { present: true, type: 'Front-Load', freq: 'Daily' },
     geyser: { present: true, type: 'Storage (25L)' },
@@ -286,7 +328,15 @@ const S = {
   // Business mode
   bizCompany: '',
   bizEmail: '',
-  bizDone: false
+  bizDone: false,
+
+  // Personal-mode hardware (Path B)
+  devices: [
+    { name: 'Shelly EM — Bedroom AC circuit', type: 'CT clamp · ±2%', online: true },
+    { name: 'Qubo smart plug — Geyser', type: 'Smart plug · ±2%', online: true }
+  ],
+  pairing: false,
+  pairStep: 0
 };
 
 let _otpTimer = null;
@@ -718,42 +768,55 @@ function stepAppliances() {
 function applianceDetail(id) {
   const a = S.appliances;
   if (id === 'fans') return `
-    <div class="app-field"><label>How many?</label>
+    <p class="unit-hint">Count each type separately — mixed inventories are normal.</p>
+    <div class="app-field"><label>Regular fans (75–80W)</label>
       <div class="qty-ctrl">
-        <button class="qty-btn" data-qcat="fans" data-dir="-">−</button>
-        <span>${a.fans?.qty || 0}</span>
-        <button class="qty-btn" data-qcat="fans" data-dir="+">+</button>
+        <button class="qty-btn" data-fanqty="regular" data-dir="-">−</button>
+        <span>${a.fans?.regular ?? 0}</span>
+        <button class="qty-btn" data-fanqty="regular" data-dir="+">+</button>
       </div>
     </div>
-    <div class="app-field"><label>Type</label>
-      <div class="pill-row">
-        ${['Regular (75–80W)','BLDC (28–35W)','Mixed'].map(t => `
-          <button class="pill-btn${a.fans?.type === t ? ' active' : ''}" data-fantype="${t}">${t}</button>
-        `).join('')}
+    <div class="app-field"><label>BLDC fans (28–35W)</label>
+      <div class="qty-ctrl">
+        <button class="qty-btn" data-fanqty="bldc" data-dir="-">−</button>
+        <span>${a.fans?.bldc ?? 0}</span>
+        <button class="qty-btn" data-fanqty="bldc" data-dir="+">+</button>
       </div>
     </div>`;
-  if (id === 'ac') return `
-    <div class="app-field"><label>How many ACs?</label>
-      <div class="qty-ctrl">
-        <button class="qty-btn" data-qcat="ac" data-dir="-">−</button>
-        <span>${a.ac?.qty || 0}</span>
-        <button class="qty-btn" data-qcat="ac" data-dir="+">+</button>
+  if (id === 'ac') {
+    const units = a.ac?.units || [];
+    return `
+    <p class="unit-hint">Each AC is tracked individually — tonnage, BEE stars, and inverter type per unit.</p>
+    ${units.map((u, i) => `
+      <div class="ac-unit">
+        <div class="ac-unit-head">
+          <b>AC ${i + 1}</b>
+          <button class="ac-remove" data-acremove="${i}">Remove</button>
+        </div>
+        <div class="app-field"><label>Tonnage</label>
+          <div class="pill-row">
+            ${AC_TONNAGES.map(t => `
+              <button class="pill-btn${u.tonnage === t ? ' active' : ''}" data-actonnage="${i}|${t}">${t}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="app-field"><label>Star rating (BEE)</label>
+          <div class="star-row">
+            ${[1,2,3,4,5].map(s => `
+              <button class="star-btn${u.stars >= s ? ' active' : ''}" data-acstars="${i}|${s}">★</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="app-field"><label>Compressor</label>
+          <div class="pill-row">
+            <button class="pill-btn${u.inv ? ' active' : ''}" data-acinv="${i}|yes">Inverter</button>
+            <button class="pill-btn${!u.inv ? ' active' : ''}" data-acinv="${i}|no">Non-Inverter</button>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="app-field"><label>Star rating (BEE)</label>
-      <div class="star-row">
-        ${[1,2,3,4,5].map(s => `
-          <button class="star-btn${(a.ac?.stars||0) >= s ? ' active' : ''}" data-acstars="${s}">★</button>
-        `).join('')}
-      </div>
-    </div>
-    <div class="app-field"><label>Type</label>
-      <div class="pill-row">
-        ${['Inverter','Non-Inverter'].map(t => `
-          <button class="pill-btn${a.ac?.type === t ? ' active' : ''}" data-actype="${t}">${t}</button>
-        `).join('')}
-      </div>
-    </div>`;
+    `).join('')}
+    ${units.length < 5 ? `<button class="btn-ghost btn-sm" data-acadd>+ Add another AC</button>` : `<p class="unit-hint">Maximum 5 units.</p>`}`;
+  }
   if (id === 'other') return `
     <div class="check-list">
       ${['Electric Oven / Microwave','Air Purifier','EV Charger','Home Office Setup','Exercise Equipment'].map(item => `
@@ -1138,21 +1201,39 @@ function tabHome() {
       </div>
     </button>
 
-    <!-- Consumption breakdown -->
+    <!-- Consumption breakdown: measured (hardware) vs estimated (inventory) -->
     <div class="card glass slide-up">
       <div class="card-hdr">
         <h3>Consumption breakdown</h3>
-        <span class="est-badge">est. <button class="info-btn" data-sheet="est-info">ⓘ</button></span>
+        <button class="info-btn" data-sheet="est-info">ⓘ methodology</button>
       </div>
-      ${[['Cooling (ACs)', 56],['Refrigeration', 13],['Fans', 11],['Lighting', 7],['Standby & others', 6]].map(([l, p]) => `
-        <div class="bar-row">
+      ${[
+        ['Cooling (ACs)', 52, true],
+        ['Water heating', 8, true],
+        ['Refrigeration', 13, false],
+        ['Fans', 11, false],
+        ['Lighting', 7, false],
+        ['Standby & others', 9, false]
+      ].map(([l, p, measured]) => `
+        <div class="bar-row bar-row-src">
           <span class="bar-lbl">${l}</span>
-          <div class="bar-track"><div class="bar-fill" style="width:${p}%"></div></div>
+          <div class="bar-track"><div class="bar-fill${measured ? '' : ' bar-est'}" style="width:${p}%"></div></div>
+          <span class="src-pill ${measured ? 'measured' : 'estimated'}">${measured ? 'MEASURED' : 'est.'}</span>
           <em>${p}%</em>
         </div>
       `).join('')}
-      <p class="method-note">Estimated from appliance inventory, BEE ratings, city defaults, and 12-month bill calibration.</p>
+      <p class="method-note">Solid bars come from your installed sensors (±2%). Faded bars are modelled from appliance inventory and bill calibration (±20–30%) — never presented as measurement.</p>
     </div>
+
+    <!-- Hardware & devices -->
+    <button class="hw-card glass slide-up" data-sheet="devices">
+      <div class="hw-card-left">
+        <div class="eyebrow">Hardware · Path B</div>
+        <div class="hw-card-line"><b>${S.devices.filter(d => d.online).length} devices online</b> · 60% of your bill is measured, not estimated</div>
+        <div class="hw-card-sub">Shelly EM on AC circuit · smart plug on geyser</div>
+      </div>
+      <span class="hw-card-cta">Manage →</span>
+    </button>
 
     <!-- Trend + quick stats -->
     <div class="card glass slide-up">
@@ -1485,8 +1566,8 @@ function tabCoach() {
                 <span>Break-even: ${item.breakeven}</span>
                 <span>Annual saving: ${item.saving}</span>
               </div>
-              ${item.cost !== '₹0' && item.cost !== 'Society-led' ? `
-                <button class="btn-ghost">I'm ready — show me the best options</button>
+              ${item.products ? `
+                <button class="btn-ghost" data-sheet="products:${item.products}">I'm ready — show me the best options</button>
               ` : ''}
             </div>
           ` : ''}
@@ -1598,9 +1679,78 @@ function sheets(c) {
     </div>`);
 
   if (S.sheet === 'est-info') return wrap(`
-    <h3>About this estimate</h3>
-    <p>Derived from your appliance inventory (BEE star ratings and wattage), city-specific usage defaults, and 12-month billing data as a calibration anchor. Never presented as a direct measurement. Smart meter integration is out of scope for this release.</p>
-    <button class="btn-primary" data-close>Understood</button>`);
+    <h3>Measured vs estimated</h3>
+    <p><strong style="color:#2FCBA3">MEASURED</strong> circuits have a CT clamp or smart plug installed — real readings, accurate to roughly ±2%.</p>
+    <p><strong style="color:#F2A93B">Estimated</strong> circuits are modelled from your appliance inventory (BEE ratings × wattage × usage hours), calibrated against your actual monthly bill — typically ±20–30%. An estimate is never presented as a measurement.</p>
+    <p>Install a sensor on any circuit and it flips to MEASURED automatically.</p>
+    <button class="btn-primary" data-sheet="devices">See my devices →</button>
+    <button class="btn-ghost btn-full" data-close>Understood</button>`);
+
+  if (S.sheet === 'devices') return wrap(`
+    <h2>Your hardware</h2>
+    <p>Griha is a hardware-software combination. Sensors turn ±20–30% estimates into ±2% measurements — circuit by circuit.</p>
+    ${S.devices.map(d => `
+      <div class="hw-row">
+        <span class="hw-dot ${d.online ? 'on' : 'off'}"></span>
+        <div><b>${d.name}</b><span>${d.type}</span></div>
+        <em>${d.online ? 'Online' : 'Offline'}</em>
+      </div>
+    `).join('')}
+    ${!S.pairing ? `
+      <button class="btn-primary btn-full" data-pairstart>+ Connect a new device</button>
+      <div class="path-compare">
+        <div class="path-col">
+          <span class="src-pill estimated">est.</span>
+          <b>Path A — Inventory</b>
+          <span>₹0 hardware · ±20–30% · static until you edit</span>
+        </div>
+        <div class="path-col">
+          <span class="src-pill measured">MEASURED</span>
+          <b>Path B — Sensors</b>
+          <span>₹1,000–4,200/circuit · ±2% · real-time</span>
+        </div>
+      </div>
+      <p class="method-note">Practical default: keep everything on Path A (free, day one) and upgrade your 2–3 heaviest circuits — AC, geyser, pump — to Path B. Small loads rarely justify the hardware spend.</p>
+      <button class="btn-ghost btn-full" data-sheet="products:sensors">See recommended sensors →</button>
+    ` : `
+      <div class="pair-wizard">
+        <h3>Connecting your device — step ${S.pairStep + 1} of ${PAIR_STEPS.length}</h3>
+        ${PAIR_STEPS.map((st, i) => `
+          <div class="pair-step${i < S.pairStep ? ' done' : i === S.pairStep ? ' current' : ''}">
+            <span class="pair-num">${i < S.pairStep ? '✓' : i + 1}</span>
+            <div><b>${st.title}</b><p>${st.desc}</p></div>
+          </div>
+        `).join('')}
+        ${S.pairStep < PAIR_STEPS.length - 1
+          ? `<button class="btn-primary btn-full" data-pairnext>Next →</button>`
+          : `<button class="btn-primary btn-full" data-pairdone>Device connected ✓</button>`}
+        <button class="btn-ghost btn-full" data-paircancel>Cancel</button>
+      </div>
+    `}`);
+
+  if (S.sheet?.startsWith('products:')) {
+    const cat = PRODUCTS[S.sheet.split(':')[1]];
+    if (cat) return wrap(`
+      <h2>${cat.title}</h2>
+      <p>${cat.context}</p>
+      ${cat.items.map(p => `
+        <div class="prod-card glass">
+          <div class="prod-info">
+            <b>${p.name}</b>
+            <span>${p.spec}</span>
+            <em>${p.save}</em>
+          </div>
+          <div class="prod-buy">
+            <span class="prod-price">${p.price}</span>
+            <div class="prod-links">
+              <button class="prod-link">Amazon ↗</button>
+              <button class="prod-link">Flipkart ↗</button>
+            </div>
+          </div>
+        </div>
+      `).join('')}
+      <p class="affiliate-note">You buy on the retailer's site at their price — payment happens there, not in Griha. Griha earns a small commission at no extra cost to you, only when you arrive from this screen. We never rank products by commission.</p>`);
+  }
 
   if (S.sheet?.startsWith('interest:')) {
     const mod = S.sheet.split(':').slice(1).join(':');
@@ -1788,41 +1938,61 @@ function bind() {
     });
   });
 
-  // Fan type
-  root.querySelectorAll('[data-fantype]').forEach(el => {
+  // Fan counts per type (regular / BLDC)
+  root.querySelectorAll('[data-fanqty]').forEach(el => {
     el.onclick = e => {
       e.stopPropagation();
-      S.appliances = { ...S.appliances, fans: { ...S.appliances.fans, type: el.dataset.fantype } };
+      const key = el.dataset.fanqty, dir = el.dataset.dir === '+' ? 1 : -1;
+      const fans = { ...S.appliances.fans };
+      fans[key] = Math.max(0, (fans[key] || 0) + dir);
+      S.appliances = { ...S.appliances, fans };
       render();
     };
   });
 
-  // AC stars
+  // Per-unit AC controls
+  const acUnits = () => (S.appliances.ac?.units || []).map(u => ({ ...u }));
+  root.querySelectorAll('[data-actonnage]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const [i, t] = el.dataset.actonnage.split('|');
+      const units = acUnits(); units[+i].tonnage = t;
+      S.appliances = { ...S.appliances, ac: { units } };
+      render();
+    };
+  });
   root.querySelectorAll('[data-acstars]').forEach(el => {
     el.onclick = e => {
       e.stopPropagation();
-      S.appliances = { ...S.appliances, ac: { ...S.appliances.ac, stars: +el.dataset.acstars } };
+      const [i, s] = el.dataset.acstars.split('|');
+      const units = acUnits(); units[+i].stars = +s;
+      S.appliances = { ...S.appliances, ac: { units } };
       render();
     };
   });
-
-  // AC type
-  root.querySelectorAll('[data-actype]').forEach(el => {
+  root.querySelectorAll('[data-acinv]').forEach(el => {
     el.onclick = e => {
       e.stopPropagation();
-      S.appliances = { ...S.appliances, ac: { ...S.appliances.ac, type: el.dataset.actype } };
+      const [i, v] = el.dataset.acinv.split('|');
+      const units = acUnits(); units[+i].inv = v === 'yes';
+      S.appliances = { ...S.appliances, ac: { units } };
       render();
     };
   });
-
-  // Qty controls
-  root.querySelectorAll('.qty-btn').forEach(el => {
+  root.querySelectorAll('[data-acremove]').forEach(el => {
     el.onclick = e => {
       e.stopPropagation();
-      const cat = el.dataset.qcat, dir = el.dataset.dir === '+' ? 1 : -1;
-      S.appliances = { ...S.appliances, [cat]: { ...S.appliances[cat], qty: Math.max(0, (S.appliances[cat]?.qty || 0) + dir) } };
+      const units = acUnits(); units.splice(+el.dataset.acremove, 1);
+      S.appliances = { ...S.appliances, ac: { units } };
       render();
     };
+  });
+  root.querySelector('[data-acadd]')?.addEventListener('click', e => {
+    e.stopPropagation();
+    const units = acUnits();
+    if (units.length < 5) units.push({ tonnage: '1.5 T', stars: 3, inv: true });
+    S.appliances = { ...S.appliances, ac: { units } };
+    render();
   });
 
   // Present toggles
@@ -1871,6 +2041,17 @@ function bind() {
   // Payment method
   root.querySelectorAll('[data-pm]').forEach(el => {
     el.onclick = e => { e.stopPropagation(); set({ payMethod: el.dataset.pm }); };
+  });
+
+  // Device pairing wizard
+  root.querySelector('[data-pairstart]')?.addEventListener('click', () => set({ pairing: true, pairStep: 0 }));
+  root.querySelector('[data-pairnext]')?.addEventListener('click', () => set({ pairStep: S.pairStep + 1 }));
+  root.querySelector('[data-paircancel]')?.addEventListener('click', () => set({ pairing: false, pairStep: 0 }));
+  root.querySelector('[data-pairdone]')?.addEventListener('click', () => {
+    set({
+      devices: [...S.devices, { name: 'Shelly 1PM — Refrigerator circuit', type: 'CT clamp · ±2%', online: true }],
+      pairing: false, pairStep: 0
+    });
   });
 
   // Pay now
