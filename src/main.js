@@ -184,12 +184,52 @@ const LOCALITIES = {
   Hyderabad: ['Hitech City', 'Banjara Hills', 'Kukatpally', 'Madhapur', 'Secunderabad', 'Gachibowli']
 };
 
+// ── Segments (one platform, three modes — shared identity, registry, tariff engine) ──
+const SEGMENTS = [
+  { id: 'personal', icon: '🏠', title: 'Personal Home',
+    sub: 'For individuals and families',
+    points: ['Bill monitoring & Tariff Guard', 'Appliance-level savings coach', 'Solar & upgrade guidance'],
+    cta: 'Continue as a home user →', status: 'live' },
+  { id: 'society', icon: '🏢', title: 'Housing Society',
+    sub: 'For RWAs, societies & apartments',
+    points: ['Common-area energy monitoring', 'Pump, lift & DG fuel intelligence', 'Lower maintenance bills for all flats'],
+    cta: 'Continue as a society →', status: 'live' },
+  { id: 'business', icon: '🏭', title: 'Business',
+    sub: 'For offices, retail & enterprises',
+    points: ['Multi-site energy visibility', 'Commercial tariff optimisation', 'ESG & compliance reporting'],
+    cta: 'Register interest →', status: 'soon' }
+];
+
+const SOCIETY_PALETTE = { primary: '#0E6E5C', accent: '#00D4AA' };
+const BUSINESS_PALETTE = { primary: '#2C3E68', accent: '#7FA6FF' };
+
+const SOCIETY_ASSETS = [
+  { name: 'Water pumps (4)', icon: '💧', share: 31, kw: 13.2, status: 'ok' },
+  { name: 'Lifts (8)', icon: '🛗', share: 22, kw: 9.4, status: 'ok' },
+  { name: 'Common lighting', icon: '💡', share: 18, kw: 7.7, status: 'ok' },
+  { name: 'STP plant', icon: '♻', share: 15, kw: 6.4, status: 'ok' },
+  { name: 'Clubhouse & gym', icon: '🏸', share: 9, kw: 3.8, status: 'ok' },
+  { name: 'Others', icon: '🔌', share: 5, kw: 2.1, status: 'ok' }
+];
+
+const SOCIETY_ALERTS = [
+  { sev: 'warn', icon: '⚠', text: 'Tower B booster pump ran 3.4 hrs today vs 1.9 hr average — possible float-valve failure. Est. waste if unfixed: ₹2,100/month.' },
+  { sev: 'info', icon: '🕗', text: 'Shifting garden lighting off-time from 6:30 to 6:05 am would save ~₹860/month at current TANGEDCO commercial rates.' }
+];
+
+const SOCIETY_HARDWARE = [
+  { name: 'Shelly 3EM — mains meter', detail: '3-phase, LT panel room', online: true },
+  { name: 'Shelly 1PM ×6 — asset meters', detail: 'Pumps, lifts, lighting circuits', online: true },
+  { name: 'Ultrasonic fuel sensor — DG tank', detail: '660 L diesel tank', online: true }
+];
+
 // ═══════════════════════════════════════════════════════════════
 // 2. STATE
 // ═══════════════════════════════════════════════════════════════
 
 const S = {
-  screen: 'auth',
+  screen: 'mode',
+  mode: null,          // personal | society | business
   step: 0,
   tab: 'Home',
   historyView: 'Analytics',
@@ -234,7 +274,19 @@ const S = {
   projected: 592,
   alertActive: true,
   roadmapOpen: null,
-  payMethod: 'UPI'
+  payMethod: 'UPI',
+
+  // Society mode
+  societyName: 'Lakshmi Gardens',
+  societyCity: 'Chennai',
+  societyTowers: 4,
+  societyFlats: 96,
+  societyTab: 'Dashboard',
+
+  // Business mode
+  bizCompany: '',
+  bizEmail: '',
+  bizDone: false
 };
 
 let _otpTimer = null;
@@ -277,11 +329,18 @@ function appCity() { return CITIES[S.profileCity] || CITIES.Chennai; }
 // ═══════════════════════════════════════════════════════════════
 
 function render() {
-  const c = (S.city ? CITIES[S.city] : null) || CITIES[S.profileCity] || CITIES.Chennai;
+  let c = (S.city ? CITIES[S.city] : null) || CITIES[S.profileCity] || CITIES.Chennai;
+  // Mode-specific palettes: society = teal, business = indigo (shared foundation, distinct identity)
+  if (S.mode === 'society' && ['auth', 'societySetup', 'societyApp'].includes(S.screen)) c = { ...c, ...SOCIETY_PALETTE };
+  if (S.screen === 'business') c = { ...c, ...BUSINESS_PALETTE };
   let content = '';
-  if (S.screen === 'auth') content = screenAuth();
+  if (S.screen === 'mode') content = screenModeSelect();
+  else if (S.screen === 'auth') content = screenAuth();
   else if (S.screen === 'language') content = screenLanguage();
   else if (S.screen === 'onboarding') content = screenOnboarding();
+  else if (S.screen === 'societySetup') content = screenSocietySetup();
+  else if (S.screen === 'societyApp') content = screenSocietyApp();
+  else if (S.screen === 'business') content = screenBusiness();
   else content = screenApp();
 
   root.innerHTML = `<div class="app" style="--primary:${c.primary};--accent:${c.accent}"><div class="grain"></div>${content}</div>`;
@@ -289,6 +348,41 @@ function render() {
   root.querySelectorAll('.stagger-list > *').forEach((el, i) => {
     el.style.animationDelay = `${40 + i * 65}ms`;
   });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 4b. MODE SELECT — one platform, three segments
+// ═══════════════════════════════════════════════════════════════
+
+function screenModeSelect() {
+  return `
+  <div class="mode-wrap">
+    <div class="auth-glow"></div>
+    <div class="auth-brand slide-up">
+      <div class="logo-mark">गृ</div>
+      <div class="logo-text">
+        <span class="logo-name">Griha</span>
+        <span class="logo-sub">Home Energy Intelligence for India</span>
+      </div>
+    </div>
+    <h2 class="mode-title slide-up" style="animation-delay:.06s">Who is Griha for today?</h2>
+    <p class="mode-sub slide-up" style="animation-delay:.1s">One platform. Same intelligence. Built for how you use energy.</p>
+    <div class="mode-grid stagger-list">
+      ${SEGMENTS.map(sg => `
+        <button class="mode-card glass mode-${sg.id}" data-mode="${sg.id}">
+          ${sg.status === 'soon' ? '<span class="mode-soon">Early access</span>' : ''}
+          <span class="mode-icon">${sg.icon}</span>
+          <span class="mode-name">${sg.title}</span>
+          <span class="mode-desc">${sg.sub}</span>
+          <ul class="mode-points">
+            ${sg.points.map(p => `<li>${p}</li>`).join('')}
+          </ul>
+          <span class="mode-cta">${sg.cta}</span>
+        </button>
+      `).join('')}
+    </div>
+    <p class="auth-footer slide-up" style="animation-delay:.3s">One account · Shared data foundation · Switch anytime</p>
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -307,9 +401,15 @@ function screenAuth() {
       </div>
     </div>
     <div class="auth-card glass slide-up" style="animation-delay:.08s">
+      ${S.mode ? `
+        <div class="auth-mode-row">
+          <span class="auth-mode-badge">${S.mode === 'society' ? '🏢 Housing Society account' : '🏠 Personal Home account'}</span>
+          <button class="link-btn" data-gomode>Change</button>
+        </div>
+      ` : ''}
       ${!S.otpDone ? (!S.otpSent ? `
         <h2>Sign in or create account</h2>
-        <p class="auth-desc">Mobile number or email. No password needed.</p>
+        <p class="auth-desc">${S.mode === 'society' ? 'Management committee member or society manager mobile/email.' : 'Mobile number or email. No password needed.'}</p>
         <div class="field-wrap">
           <input id="authInput" type="text" class="field-input" placeholder="Mobile number or email"
             value="${S.authInput}" autocomplete="off" autocapitalize="off" inputmode="tel"/>
@@ -718,6 +818,200 @@ function stepComplete() {
     <button class="btn-primary btn-full slide-up" style="animation-delay:.34s" id="enterApp">
       Open my dashboard →
     </button>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 7b. SOCIETY MODE — setup + MC dashboard
+// ═══════════════════════════════════════════════════════════════
+
+function screenSocietySetup() {
+  return `
+  <div class="onb-wrap">
+    <div class="onb-top">
+      <button class="back-btn" data-gomode>‹</button>
+      <div class="onb-brand">गृ Griha · Society</div>
+      <div class="progress-rail" style="flex:1;max-width:130px"><div class="progress-fill" style="width:60%"></div></div>
+    </div>
+    <div class="onb-body">
+      <h2 class="slide-up">Set up your society.</h2>
+      <p class="slide-up" style="animation-delay:.04s">Griha monitors common-area energy — pumps, lifts, lighting, STP, DG — and cuts the maintenance bill every flat shares.</p>
+      <div class="field-wrap slide-up" style="animation-delay:.08s">
+        <input id="socName" type="text" class="field-input" placeholder="Society name" value="${S.societyName}"/>
+      </div>
+      <div class="section-label slide-up">City</div>
+      <div class="chip-row slide-up" style="animation-delay:.12s">
+        ${Object.keys(CITIES).map(n => `
+          <button class="chip${S.societyCity === n ? ' active' : ''}" data-soccity="${n}">${n}</button>
+        `).join('')}
+      </div>
+      <div class="soc-nums slide-up" style="animation-delay:.16s">
+        <div class="soc-num-field">
+          <label>Towers</label>
+          <div class="qty-ctrl">
+            <button class="qty-btn" data-socqty="towers" data-dir="-">−</button>
+            <span>${S.societyTowers}</span>
+            <button class="qty-btn" data-socqty="towers" data-dir="+">+</button>
+          </div>
+        </div>
+        <div class="soc-num-field">
+          <label>Flats</label>
+          <div class="qty-ctrl">
+            <button class="qty-btn" data-socqty="flats" data-dir="-">−</button>
+            <span>${S.societyFlats}</span>
+            <button class="qty-btn" data-socqty="flats" data-dir="+">+</button>
+          </div>
+        </div>
+      </div>
+      <div class="insight-card glass slide-up" style="animation-delay:.2s">
+        <span class="eyebrow">📦 What gets installed</span>
+        <p>One Shelly 3EM mains meter, one Shelly 1PM per major asset, and an ultrasonic fuel sensor on the DG tank. Read-only, non-invasive, installed in under a day.</p>
+      </div>
+      <button class="btn-primary btn-full slide-up" id="socEnter" style="animation-delay:.24s">Open society dashboard →</button>
+      <p class="security-note slide-up">₹15,000 one-time setup · ₹2,500/month · Cancel anytime</p>
+    </div>
+  </div>`;
+}
+
+function screenSocietyApp() {
+  const totalKw = SOCIETY_ASSETS.reduce((s, a) => s + a.kw, 0).toFixed(1);
+  const perFlat = Math.round(68400 / S.societyFlats);
+  return `
+  <div class="soc-shell">
+    <header class="soc-header" style="background:linear-gradient(180deg,${SOCIETY_PALETTE.primary}42 0%,transparent 100%)">
+      <div>
+        <div class="hdr-greeting">${S.societyName}</div>
+        <div class="hdr-city">${S.societyCity} · ${S.societyTowers} towers · ${S.societyFlats} flats · MC view</div>
+      </div>
+      <button class="chip" data-gomode>Switch segment</button>
+    </header>
+
+    <div class="tab-scroll soc-scroll">
+
+      <!-- Live load -->
+      <div class="bill-card glass slide-up">
+        <div class="bill-card-left">
+          <div class="eyebrow">Common-area live load <span class="live-pulse"></span></div>
+          <div class="bill-big">${totalKw} kW</div>
+          <div class="bill-meta">Shelly 3EM mains · updated 14 s ago</div>
+        </div>
+        <div class="soc-month-box">
+          <b>₹68,400</b>
+          <span>est. common bill this month</span>
+          <em>≈ ${inr(perFlat)}/flat</em>
+        </div>
+      </div>
+
+      <!-- Alerts -->
+      ${SOCIETY_ALERTS.map(a => `
+        <div class="soc-alert ${a.sev} slide-up">
+          <span>${a.icon}</span>
+          <p>${a.text}</p>
+        </div>
+      `).join('')}
+
+      <!-- Asset breakdown -->
+      <div class="card glass slide-up">
+        <div class="card-hdr"><h3>Asset breakdown</h3><span class="data-src-badge">Shelly 1PM per asset</span></div>
+        ${SOCIETY_ASSETS.map(a => `
+          <div class="bar-row">
+            <span class="bar-lbl">${a.icon} ${a.name}</span>
+            <div class="bar-track"><div class="bar-fill" style="width:${a.share * 3}%"></div></div>
+            <em>${a.kw} kW</em>
+          </div>
+        `).join('')}
+        <p class="method-note">Live metered values — not estimates. Per-asset circuits metered individually.</p>
+      </div>
+
+      <!-- DG fuel -->
+      <div class="card glass slide-up">
+        <div class="card-hdr"><h3>DG fuel level</h3><span class="data-src-badge">Ultrasonic sensor</span></div>
+        <div class="fuel-row">
+          <div class="fuel-tank">
+            <div class="fuel-fill" style="height:62%"></div>
+          </div>
+          <div class="fuel-info">
+            <b>62% · 410 L</b>
+            <span>of 660 L tank</span>
+            <em>≈ 11 hrs full-load runtime</em>
+            <p>Last refuel 22/06/26 · consumption normal. No pilferage anomaly detected in the last 30 days.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Savings -->
+      <div class="coach-hero glass slide-up">
+        <span class="coach-badge">📉 This quarter</span>
+        <h2>₹18,400 saved on common-area energy.</h2>
+        <p>Pump scheduling moved to off-peak hours and lift standby optimisation in Towers A and C account for most of it. That's ₹${Math.round(18400 / S.societyFlats)} back per flat this quarter.</p>
+      </div>
+
+      <!-- Hardware status -->
+      <div class="card glass slide-up">
+        <div class="card-hdr"><h3>Hardware status</h3><span class="positive">All online</span></div>
+        ${SOCIETY_HARDWARE.map(h => `
+          <div class="hw-row">
+            <span class="hw-dot ${h.online ? 'on' : 'off'}"></span>
+            <div><b>${h.name}</b><span>${h.detail}</span></div>
+            <em>${h.online ? 'Online' : 'Offline'}</em>
+          </div>
+        `).join('')}
+      </div>
+
+      <!-- Plan -->
+      <div class="card glass slide-up">
+        <div class="card-hdr"><h3>Your plan</h3></div>
+        <div class="plan-row"><span>Setup (one-time)</span><b>₹15,000</b></div>
+        <div class="plan-row"><span>Monitoring SaaS</span><b>₹2,500/month</b></div>
+        <div class="plan-row"><span>Payback from savings</span><b class="positive">≈ 4 months</b></div>
+        <p class="method-note">Savings this quarter (₹18,400) already exceed two quarters of subscription cost.</p>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 7c. BUSINESS MODE — enterprise stub with lead capture
+// ═══════════════════════════════════════════════════════════════
+
+function screenBusiness() {
+  return `
+  <div class="mode-wrap">
+    <div class="auth-glow"></div>
+    <div class="auth-brand slide-up">
+      <div class="logo-mark">गृ</div>
+      <div class="logo-text">
+        <span class="logo-name">Griha for Business</span>
+        <span class="logo-sub">Enterprise energy intelligence</span>
+      </div>
+    </div>
+    <div class="auth-card glass slide-up biz-card" style="animation-delay:.08s">
+      ${!S.bizDone ? `
+        <span class="mode-soon" style="position:static;display:inline-block;margin-bottom:12px">Coming soon for enterprise</span>
+        <h2>Multi-site energy visibility for your business.</h2>
+        <ul class="biz-points">
+          <li>⚡ Commercial & industrial tariff optimisation across locations</li>
+          <li>📊 Single dashboard for offices, retail outlets and plants</li>
+          <li>🌱 ESG and BRSR-ready energy & emissions reporting</li>
+          <li>🔔 Demand-charge alerts before penalties hit your bill</li>
+        </ul>
+        <p class="auth-desc">We're onboarding early enterprise partners now. Register and our team will reach out.</p>
+        <div class="field-wrap">
+          <input id="bizCompany" type="text" class="field-input" placeholder="Company name" value="${S.bizCompany}"/>
+        </div>
+        <div class="field-wrap">
+          <input id="bizEmail" type="text" class="field-input" placeholder="Work email" value="${S.bizEmail}"/>
+        </div>
+        <button class="btn-primary btn-full" id="bizSubmit">Register interest →</button>
+      ` : `
+        <div class="success-wrap">
+          <div class="success-ring">✓</div>
+          <h2>You're on the list.</h2>
+          <p>Thanks${S.bizCompany ? ', ' + S.bizCompany : ''} — we'll reach out as enterprise onboarding opens in your region.</p>
+        </div>
+      `}
+      <button class="btn-ghost btn-full" data-gomode>← Back to segments</button>
+    </div>
   </div>`;
 }
 
@@ -1325,6 +1619,42 @@ function sheets(c) {
 // ═══════════════════════════════════════════════════════════════
 
 function bind() {
+  // Segment selection
+  root.querySelectorAll('[data-mode]').forEach(el => {
+    el.onclick = () => {
+      const m = el.dataset.mode;
+      if (m === 'business') set({ mode: 'business', screen: 'business', bizDone: false });
+      else set({ mode: m, screen: 'auth', otpSent: false, otpDone: false, otpDigits: ['','','','','',''], authInput: '' });
+    };
+  });
+
+  // Back to segment picker
+  root.querySelectorAll('[data-gomode]').forEach(el => {
+    el.onclick = () => set({ screen: 'mode', mode: null });
+  });
+
+  // Society setup
+  const socName = root.querySelector('#socName');
+  if (socName) socName.addEventListener('input', e => { S.societyName = e.target.value; });
+  root.querySelectorAll('[data-soccity]').forEach(el => {
+    el.onclick = () => set({ societyCity: el.dataset.soccity });
+  });
+  root.querySelectorAll('[data-socqty]').forEach(el => {
+    el.onclick = () => {
+      const dir = el.dataset.dir === '+' ? 1 : -1;
+      if (el.dataset.socqty === 'towers') set({ societyTowers: Math.max(1, S.societyTowers + dir) });
+      else set({ societyFlats: Math.max(4, S.societyFlats + dir * 4) });
+    };
+  });
+  root.querySelector('#socEnter')?.addEventListener('click', () => set({ screen: 'societyApp' }));
+
+  // Business lead capture
+  const bizCompany = root.querySelector('#bizCompany');
+  if (bizCompany) bizCompany.addEventListener('input', e => { S.bizCompany = e.target.value; });
+  const bizEmail = root.querySelector('#bizEmail');
+  if (bizEmail) bizEmail.addEventListener('input', e => { S.bizEmail = e.target.value; });
+  root.querySelector('#bizSubmit')?.addEventListener('click', () => set({ bizDone: true }));
+
   // Generic tab navigation
   root.querySelectorAll('[data-tab]').forEach(el => {
     el.onclick = e => { e.stopPropagation(); set({ tab: el.dataset.tab, sheet: null }); };
@@ -1402,7 +1732,10 @@ function bind() {
     });
     setTimeout(() => nameInput.focus(), 50);
   }
-  root.querySelector('#submitName')?.addEventListener('click', () => set({ screen: 'language' }));
+  root.querySelector('#submitName')?.addEventListener('click', () => {
+    if (S.mode === 'society') set({ screen: 'societySetup' });
+    else set({ screen: 'language' });
+  });
 
   // Language
   root.querySelectorAll('[data-lang]').forEach(el => {
@@ -1525,9 +1858,9 @@ function bind() {
     set({ screen: 'app', profileCity: S.city || 'Chennai', profileName: S.name || 'Ananya' });
   });
 
-  // Restart onboarding
+  // Restart onboarding from segment picker
   root.querySelector('#restartOnb')?.addEventListener('click', () => {
-    set({ screen: 'auth', otpSent: false, otpDone: false, otpDigits: ['','','','','',''], authInput: '', city: null, step: 0 });
+    set({ screen: 'mode', mode: null, otpSent: false, otpDone: false, otpDigits: ['','','','','',''], authInput: '', city: null, step: 0 });
   });
 
   // City switcher (right panel + sidebar)
