@@ -2,6 +2,22 @@
 
 Griha is a static HTML, CSS, and JavaScript prototype for a household financial operating system.
 
+## Report Studio (`report-builder.html`)
+
+A fully on-device smart report builder. Open `report-builder.html` (or the **Report Studio** link in the app sidebar).
+
+- **Load many files at once** — `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, `.ods`, `.json`, and best-effort table extraction from `.pdf`. Multi-sheet workbooks become one source per sheet.
+- **Build screen** — every field from every file appears in a palette; drag (or click) fields onto the canvas to compose a report. Drag column chips to reorder.
+- **Cross-file lookups** — drop a field from a second file and pick the matching key once (like VLOOKUP); after that its fields join automatically.
+- **Formula columns** — Excel-style expressions with `[Field]` references: arithmetic, `IF`, text functions, `LOOKUP`, `SUMIF`, `COUNTMATCH` (self-lookup / duplicate counts), whole-column aggregates like `COLSUM`, and more. Live result preview while typing.
+- **Shaping** — filters, multi-level sort, group-by with per-column aggregation (sum, average, count, distinct, join), and a totals row.
+- **Saved reports** — save the report *design* (never the data) on the device, reload it next month against fresh files, or export/import the settings as a JSON file to share with a colleague.
+- **Access control** — lock a saved report with a password (PBKDF2-hashed) so others on the machine can run it but not modify or delete it.
+- **Export formats** — Excel, CSV, TSV, PDF, PRN (fixed width), TXT, HTML, JSON, XML, Markdown. Excel and PDF outputs can be **encrypted with an open-password**.
+- **Privacy by design** — all parsing, computation, and file generation happen in the browser. Nothing is uploaded, no server exists, and file data is never stored (it lives in memory and vanishes when the tab closes), so loading personal data creates no DPA/GDPR processing off the device. All libraries are vendored locally in `vendor/`, so it also works offline.
+
+The computation engine lives in `src/report-engine.js` (pure JS, no DOM) and can be unit-tested in Node directly.
+
 ## Run locally
 
 From the repository root:

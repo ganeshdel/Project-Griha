@@ -1,6 +1,6 @@
 /* Griha service worker — network-first app shell with offline fallback.
    Bump CACHE_VERSION on every deploy so clients pick up new builds. */
-const CACHE_VERSION = 'griha-v4';
+const CACHE_VERSION = 'griha-v5';
 const APP_SHELL = [
   './',
   './index.html',
@@ -8,7 +8,17 @@ const APP_SHELL = [
   './src/styles.css',
   './manifest.webmanifest',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './report-builder.html',
+  './src/report-builder.js',
+  './src/report-engine.js',
+  './src/report-builder.css',
+  './vendor/xlsx.full.min.js',
+  './vendor/pdf.min.js',
+  './vendor/pdf.worker.min.js',
+  './vendor/jspdf.umd.min.js',
+  './vendor/jspdf.plugin.autotable.min.js',
+  './vendor/xlsx-populate.min.js'
 ];
 
 self.addEventListener('install', e => {
