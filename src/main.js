@@ -308,16 +308,21 @@ const S = {
   billingCycle: 'bi-monthly',
   method: null,
   cycleStart: 1,
+  editReturn: false,   // true when editing one onboarding step from Settings
   appliances: {
-    // Per-unit registry (IA §1.2): every AC is an individual record; fans split by type
+    // Per-unit registry (IA §1.2): every AC and fridge is an individual record; fans split by type
     fans: { regular: 4, bldc: 0 },
     ac: { units: [
       { tonnage: '1.5 T', stars: 3, inv: true },
       { tonnage: '1.5 T', stars: 3, inv: true }
     ] },
-    fridge: { present: true, stars: 3, type: 'Frost-Free' },
+    fridge: { units: [
+      { capacity: '200–350 L', stars: 3, type: 'Frost-Free' }
+    ] },
     washer: { present: true, type: 'Front-Load', freq: 'Daily' },
     geyser: { present: true, type: 'Storage (25L)' },
+    dishwasher: { present: false, stars: 4 },
+    vacuum: { present: false },
     other: ['Electric Oven / Microwave', 'Home Office Setup']
   },
   openAppliance: null,
@@ -375,6 +380,13 @@ let _otpTimer = null;
 function set(patch) {
   Object.assign(S, patch);
   render();
+}
+
+// Advance one onboarding step — or, when editing a single step from
+// Settings, save and return straight to the dashboard.
+function advanceOnboarding() {
+  if (S.editReturn) set({ screen: 'app', editReturn: false, profileCity: S.city || S.profileCity });
+  else if (S.step < 9) set({ step: S.step + 1 });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -663,8 +675,8 @@ function stepLocation() {
     `).join('')}
   </div>
   <div class="btn-pair slide-up" style="animation-delay:.18s">
-    <button class="btn-ghost" id="onbNext">Skip</button>
-    <button class="btn-primary" id="onbNext">${S.locality ? `Use ${S.locality} →` : 'Skip →'}</button>
+    <button class="btn-ghost" id="locSkip">Skip</button>
+    <button class="btn-primary" id="locSave" ${S.locality ? '' : 'disabled'}>Save & continue →</button>
   </div>`;
 }
 
@@ -778,6 +790,8 @@ function stepAppliances() {
     { id: 'fridge', icon: '🧊', label: 'Refrigerator' },
     { id: 'washer', icon: '👕', label: 'Washing Machine' },
     { id: 'geyser', icon: '🚿', label: 'Water Heater / Geyser' },
+    { id: 'dishwasher', icon: '🍽', label: 'Dishwasher' },
+    { id: 'vacuum', icon: '🤖', label: 'Robotic Vacuum' },
     { id: 'other', icon: '🔌', label: 'Other High-Consumption' }
   ];
   return `
@@ -854,6 +868,61 @@ function applianceDetail(id) {
     `).join('')}
     ${units.length < 5 ? `<button class="btn-ghost btn-sm" data-acadd>+ Add another AC</button>` : `<p class="unit-hint">Maximum 5 units.</p>`}`;
   }
+  if (id === 'fridge') {
+    const units = a.fridge?.units || [];
+    const CAPS = ['< 200 L', '200–350 L', '350–500 L', '500+ L / multi-door'];
+    return `
+    <p class="unit-hint">Second fridge? Add it — each is tracked with its own size and rating.</p>
+    ${units.map((u, i) => `
+      <div class="ac-unit">
+        <div class="ac-unit-head">
+          <b>Fridge ${i + 1}</b>
+          ${units.length > 1 ? `<button class="ac-remove" data-frremove="${i}">Remove</button>` : ''}
+        </div>
+        <div class="app-field"><label>Capacity</label>
+          <div class="pill-row">
+            ${CAPS.map(cp => `
+              <button class="pill-btn${u.capacity === cp ? ' active' : ''}" data-frcap="${i}|${cp}">${cp}</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="app-field"><label>Star rating (BEE)</label>
+          <div class="star-row">
+            ${[1,2,3,4,5].map(s => `
+              <button class="star-btn${u.stars >= s ? ' active' : ''}" data-frstars="${i}|${s}">★</button>
+            `).join('')}
+          </div>
+        </div>
+        <div class="app-field"><label>Type</label>
+          <div class="pill-row">
+            ${['Frost-Free','Direct-Cool'].map(tp => `
+              <button class="pill-btn${u.type === tp ? ' active' : ''}" data-frtype="${i}|${tp}">${tp}</button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('')}
+    ${units.length < 3 ? `<button class="btn-ghost btn-sm" data-fradd>+ Add a second fridge</button>` : ''}`;
+  }
+  if (id === 'dishwasher') return `
+    <div class="pill-row">
+      <button class="pill-btn${a.dishwasher?.present ? ' active' : ''}" data-present="dishwasher-yes">Present</button>
+      <button class="pill-btn${a.dishwasher?.present === false ? ' active' : ''}" data-present="dishwasher-no">Not in home</button>
+    </div>
+    ${a.dishwasher?.present ? `
+      <div class="app-field"><label>Star rating (BEE)</label>
+        <div class="star-row">
+          ${[1,2,3,4,5].map(s => `
+            <button class="star-btn${(a.dishwasher?.stars||0) >= s ? ' active' : ''}" data-dwstars="${s}">★</button>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}`;
+  if (id === 'vacuum') return `
+    <div class="pill-row">
+      <button class="pill-btn${a.vacuum?.present ? ' active' : ''}" data-present="vacuum-yes">Present</button>
+      <button class="pill-btn${a.vacuum?.present === false ? ' active' : ''}" data-present="vacuum-no">Not in home</button>
+    </div>`;
   if (id === 'other') return `
     <div class="check-list">
       ${['Electric Oven / Microwave','Air Purifier','EV Charger','Home Office Setup','Exercise Equipment'].map(item => `
@@ -1171,6 +1240,7 @@ function screenApp() {
             <div class="hdr-bill-amt">${inr(S.billToDate)}</div>
             <div class="hdr-bill-lbl">est. · ${t('days_left', { n: S.daysLeft })}</div>
           </div>
+          <button class="hdr-gear" data-sheet="settings" aria-label="Settings">⚙</button>
         </header>
 
         ${S.alertActive ? `
@@ -1737,6 +1807,36 @@ function sheets(c) {
     <button class="btn-primary" data-sheet="devices">See my devices →</button>
     <button class="btn-ghost btn-full" data-close>Understood</button>`);
 
+  if (S.sheet === 'settings') {
+    const bhkLabel = BHK_OPTIONS.find(b => b.id === S.bhk)?.label || '3 BHK';
+    const propLabel = PROPERTY_TYPES.find(p => p.id === S.propType)?.label || 'Flat / Apartment';
+    const acCount = S.appliances.ac?.units?.length || 0;
+    const frCount = S.appliances.fridge?.units?.length || 0;
+    const fanCount = (S.appliances.fans?.regular || 0) + (S.appliances.fans?.bldc || 0);
+    return wrap(`
+    <h2>Profile & settings</h2>
+    <p>Moved house, bought an appliance, or changed your billing cycle? Edit any section — your scores and forecasts recalculate.</p>
+    ${[
+      ['📍', 'City & locality', `${S.profileCity}${S.locality ? ' · ' + S.locality : ''}`, 'editstep', 3],
+      ['🏠', 'Home & ownership', `${bhkLabel} ${propLabel} · ${S.tenure === 'owner' ? 'Owned' : 'Rented'}`, 'editstep', 4],
+      ['📅', 'Billing cycle', `${S.billingCycle} · starts ~${S.cycleStart}${S.cycleStart === 1 ? 'st' : 'th'}`, 'editstep', 5],
+      ['🔌', 'Appliances', `${fanCount} fans · ${acCount} ACs · ${frCount} fridge${frCount > 1 ? 's' : ''}`, 'editstep', 7],
+      ['⏰', 'Usage patterns', S.usage.occ, 'editstep', 8],
+      ['🌐', 'Language', S.language, 'editlang', 0]
+    ].map(([icon, label, value, act, step]) => `
+      <button class="settings-row" data-${act}="${step}">
+        <span class="sr-icon">${icon}</span>
+        <div class="sr-info"><b>${label}</b><span>${value}</span></div>
+        <span class="sr-edit">Edit ›</span>
+      </button>
+    `).join('')}
+    <div class="settings-links">
+      <button class="btn-ghost btn-full" data-sheet="privacy">🛡 Privacy & consent (DPDP)</button>
+      <button class="btn-ghost btn-full" data-sheet="devices">📡 Hardware & devices</button>
+      <button class="btn-ghost btn-full" data-gomode>⇄ Switch segment (Personal / Society / Business)</button>
+    </div>`);
+  }
+
   if (S.sheet === 'privacy') return wrap(`
     <h2>Privacy & consent</h2>
     <p>DPDP Act 2023: each data category has its own consent, recorded with a timestamp and notice version, and independently revocable. Revoking stops processing for that category without affecting the rest.</p>
@@ -1978,17 +2078,27 @@ function bind() {
   root.querySelectorAll('[data-lang]').forEach(el => {
     el.onclick = () => set({ language: el.dataset.lang });
   });
-  root.querySelector('#langContinue')?.addEventListener('click', () => set({ screen: 'onboarding', step: 0 }));
+  root.querySelector('#langContinue')?.addEventListener('click', () => {
+    if (S.editReturn) set({ screen: 'app', editReturn: false });
+    else set({ screen: 'onboarding', step: 0 });
+  });
 
-  // Onboarding back
+  // Settings → edit a single onboarding step, then return to dashboard
+  root.querySelectorAll('[data-editstep]').forEach(el => {
+    el.onclick = () => set({ screen: 'onboarding', step: +el.dataset.editstep, sheet: null, editReturn: true, city: S.city || S.profileCity });
+  });
+  root.querySelector('[data-editlang]')?.addEventListener('click', () => set({ screen: 'language', sheet: null, editReturn: true }));
+
+  // Onboarding back — in edit mode, back returns to the dashboard
   root.querySelector('#onbBack')?.addEventListener('click', () => {
-    if (S.step > 0) set({ step: S.step - 1 });
+    if (S.editReturn) set({ screen: 'app', editReturn: false, profileCity: S.city || S.profileCity });
+    else if (S.step > 0) set({ step: S.step - 1 });
     else set({ screen: 'language' });
   });
 
   // Onboarding next (all next buttons)
   root.querySelectorAll('#onbNext').forEach(el => {
-    el.onclick = e => { e.stopPropagation(); if (S.step < 9) set({ step: S.step + 1 }); };
+    el.onclick = e => { e.stopPropagation(); advanceOnboarding(); };
   });
 
   // City selection
@@ -1996,12 +2106,18 @@ function bind() {
     el.onclick = () => { if (CITIES[el.dataset.city]) set({ city: el.dataset.city }); };
   });
 
-  // Locality
+  // Locality — update Save button state without re-render (keeps input focus)
   const locInput = root.querySelector('#locInput');
-  if (locInput) locInput.addEventListener('input', e => { S.locality = e.target.value; });
+  if (locInput) locInput.addEventListener('input', e => {
+    S.locality = e.target.value;
+    const saveBtn = root.querySelector('#locSave');
+    if (saveBtn) saveBtn.disabled = !S.locality.trim();
+  });
   root.querySelectorAll('[data-loc]').forEach(el => {
     el.onclick = () => set({ locality: el.dataset.loc });
   });
+  root.querySelector('#locSkip')?.addEventListener('click', () => { S.locality = ''; advanceOnboarding(); });
+  root.querySelector('#locSave')?.addEventListener('click', () => advanceOnboarding());
 
   // Property
   root.querySelectorAll('[data-prop]').forEach(el => { el.onclick = () => set({ propType: el.dataset.prop }); });
@@ -2080,6 +2196,42 @@ function bind() {
     if (units.length < 5) units.push({ tonnage: '1.5 T', stars: 3, inv: true });
     S.appliances = { ...S.appliances, ac: { units } };
     render();
+  });
+
+  // Per-unit fridge controls
+  const frUnits = () => (S.appliances.fridge?.units || []).map(u => ({ ...u }));
+  const setFr = (fn) => e => {
+    e.stopPropagation();
+    const units = frUnits(); fn(units);
+    S.appliances = { ...S.appliances, fridge: { units } };
+    render();
+  };
+  root.querySelectorAll('[data-frcap]').forEach(el => {
+    const [i, cp] = el.dataset.frcap.split('|');
+    el.onclick = setFr(units => { units[+i].capacity = cp; });
+  });
+  root.querySelectorAll('[data-frstars]').forEach(el => {
+    const [i, s] = el.dataset.frstars.split('|');
+    el.onclick = setFr(units => { units[+i].stars = +s; });
+  });
+  root.querySelectorAll('[data-frtype]').forEach(el => {
+    const [i, tp] = el.dataset.frtype.split('|');
+    el.onclick = setFr(units => { units[+i].type = tp; });
+  });
+  root.querySelectorAll('[data-frremove]').forEach(el => {
+    el.onclick = setFr(units => { units.splice(+el.dataset.frremove, 1); });
+  });
+  root.querySelector('[data-fradd]')?.addEventListener('click', setFr(units => {
+    if (units.length < 3) units.push({ capacity: '< 200 L', stars: 3, type: 'Direct-Cool' });
+  }));
+
+  // Dishwasher stars
+  root.querySelectorAll('[data-dwstars]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      S.appliances = { ...S.appliances, dishwasher: { ...S.appliances.dishwasher, stars: +el.dataset.dwstars } };
+      render();
+    };
   });
 
   // Present toggles

@@ -1,6 +1,6 @@
 /* Griha service worker — network-first app shell with offline fallback.
    Bump CACHE_VERSION on every deploy so clients pick up new builds. */
-const CACHE_VERSION = 'griha-v3';
+const CACHE_VERSION = 'griha-v4';
 const APP_SHELL = [
   './',
   './index.html',

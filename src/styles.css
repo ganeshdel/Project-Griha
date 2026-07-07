@@ -1546,6 +1546,29 @@ h1, h2, h3, h4 { font-family: 'Syne', sans-serif; letter-spacing: -.03em; line-h
    PRIVACY / CONSENT (DPDP) · SHELLY LIVE CONNECT · i18n
    ═══════════════════════════════════════════════════════════════ */
 
+.hdr-gear {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  margin-left: 10px; align-self: flex-start;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: rgba(255,255,255,.75); font-size: 15px;
+  display: grid; place-items: center; transition: background .15s, transform .3s;
+}
+.hdr-gear:hover { background: rgba(255,255,255,.16); transform: rotate(45deg); }
+
+.settings-row {
+  width: 100%; display: flex; align-items: center; gap: 13px;
+  padding: 13px 0; border-top: 1px solid rgba(255,255,255,.07);
+  text-align: left; cursor: pointer; transition: opacity .15s;
+}
+.settings-row:hover { opacity: .8; }
+.sr-icon { font-size: 17px; flex-shrink: 0; }
+.sr-info { flex: 1; min-width: 0; }
+.sr-info b { display: block; font-size: 14px; }
+.sr-info span { display: block; font-size: 12px; color: rgba(255,255,255,.48); margin-top: 2px; }
+.sr-edit { font-size: 12px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+.settings-links { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.settings-links .btn-ghost { justify-content: flex-start; font-size: 13px; }
+
 .lang-note {
   margin: 12px 0 2px; padding: 9px 12px; border-radius: 12px;
   background: rgba(127,166,255,.08); border: 1px solid rgba(127,166,255,.2);
