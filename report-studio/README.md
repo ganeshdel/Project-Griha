@@ -6,6 +6,8 @@ A standalone, fully on-device smart report builder. It is **not part of the Grih
 
 Any of these work:
 
+- **Easiest — one file**: download `ReportStudio.html` and double-click it. The entire tool (styles, engine, every library) is inside that single file, so it runs from anywhere — a laptop, a USB stick, a shared drive — with no internet and nothing to install. Regenerate it after code changes with `node build-single-file.js`.
+
 - Serve the folder with any static server and open it, e.g. from the repo root:
 
   ```bash
@@ -13,7 +15,7 @@ Any of these work:
   # then open http://localhost:5173/report-studio/
   ```
 
-- Or simply double-click `report-studio/index.html` to open it straight from disk (all libraries are bundled in `vendor/`, so it works without internet).
+- Or double-click `report-studio/index.html` to open the folder version straight from disk (all libraries are bundled in `vendor/`, so it also works without internet).
 
 ## What it does
 
