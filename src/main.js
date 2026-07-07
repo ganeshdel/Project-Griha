@@ -1216,9 +1216,6 @@ function screenApp() {
         `).join('')}
       </nav>
       <div class="sidebar-footer">
-        <a class="snav-item" href="./report-builder.html" style="text-decoration:none">
-          <span class="snav-icon">📊</span><span>Report Studio</span>
-        </a>
         <button class="snav-item" data-sheet="privacy">
           <span class="snav-icon">🛡</span><span>Privacy & consent</span>
         </button>

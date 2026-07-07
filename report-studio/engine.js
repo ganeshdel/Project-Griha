@@ -1,4 +1,4 @@
-/* Griha Report Studio — pure computation engine.
+/* Report Studio — pure computation engine.
    No DOM, no network, no storage: safe to unit-test in Node.
    Exposes window.RBEngine in browsers and module.exports in Node. */
 (function (root, factory) {

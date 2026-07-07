@@ -3,13 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Griha — Report Studio</title>
-    <meta name="description" content="On-device smart report builder. Combine Excel, CSV and PDF files, drag-and-drop fields, add formulas and lookups, export to many formats. Nothing leaves your machine." />
+    <title>Report Studio — on-device smart report builder</title>
+    <meta name="description" content="Standalone on-device smart report builder. Combine Excel, CSV and PDF files, drag-and-drop fields, add formulas and lookups, export to many formats. Nothing leaves your machine." />
     <meta name="theme-color" content="#080808" />
-    <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
-    <link rel="stylesheet" href="./src/report-builder.css" />
+    <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="grain"></div>
@@ -21,7 +18,7 @@
     <script src="./vendor/jspdf.umd.min.js"></script>
     <script src="./vendor/jspdf.plugin.autotable.min.js"></script>
     <script src="./vendor/xlsx-populate.min.js"></script>
-    <script src="./src/report-engine.js"></script>
-    <script src="./src/report-builder.js"></script>
+    <script src="./engine.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>

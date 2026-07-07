@@ -1,5 +1,5 @@
 /* ─────────────────────────────────────────────────────────────
-   Griha Report Studio — UI layer.
+   Report Studio — UI layer (standalone tool).
    Everything runs on this device: files are parsed in browser
    memory, never uploaded, never written to disk by the app.
    Only report *settings* (no data) are kept in localStorage.
@@ -8,8 +8,8 @@
   'use strict';
 
   const E = window.RBEngine;
-  const TPL_KEY = 'griha.rb.templates.v1';
-  const DRAFT_KEY = 'griha.rb.draft.v1';
+  const TPL_KEY = 'reportstudio.templates.v1';
+  const DRAFT_KEY = 'reportstudio.draft.v1';
   const PREVIEW_ROWS = 100;
 
   if (window.pdfjsLib) {
@@ -761,7 +761,7 @@
   function exportTemplate(tplId) {
     const tpl = state.templates.find(function (t) { return t.id === tplId; });
     if (!tpl) return;
-    const blob = new Blob([JSON.stringify({ grihaReport: 1, template: tpl }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ reportStudio: 1, template: tpl }, null, 2)], { type: 'application/json' });
     downloadBlob(blob, slug(tpl.name) + '.report.json');
     toast('Report settings exported (no data inside).');
   }
@@ -769,8 +769,8 @@
   function importTemplateFile(file) {
     file.text().then(function (text) {
       const data = JSON.parse(text);
-      const tpl = data && data.grihaReport ? data.template : null;
-      if (!tpl || !tpl.def) throw new Error('not a Griha report settings file');
+      const tpl = data && (data.reportStudio || data.grihaReport) ? data.template : null;
+      if (!tpl || !tpl.def) throw new Error('not a Report Studio settings file');
       tpl.id = uid();
       tpl.name = tpl.name || 'Imported report';
       const names = state.templates.map(function (t) { return t.name; });
@@ -970,7 +970,7 @@
     doc.text(title, 40, 42);
     doc.setFontSize(8.5);
     doc.setTextColor(120);
-    doc.text('Generated ' + new Date().toLocaleString() + ' · Griha Report Studio · processed on-device', 40, 58);
+    doc.text('Generated ' + new Date().toLocaleString() + ' · Report Studio · processed on-device', 40, 58);
     const colStyles = {};
     res.columns.forEach(function (c, i) {
       if (c.align === 'right' || ['number', 'currency', 'percent'].indexOf(c.format) >= 0) colStyles[i] = { halign: 'right' };
@@ -1000,7 +1000,7 @@
       'table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #ddd;padding:6px 10px;text-align:left}' +
       'th{background:#f3f3f3}tr:nth-child(even) td{background:#fafafa}td.num{text-align:right;font-variant-numeric:tabular-nums}' +
       '</style></head><body><h1>' + title + '</h1><p style="color:#777;font-size:12px">Generated ' +
-      esc(new Date().toLocaleString()) + ' · Griha Report Studio</p><table><thead><tr>' +
+      esc(new Date().toLocaleString()) + ' · Report Studio</p><table><thead><tr>' +
       m.head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       m.body.map(function (r) {
         return '<tr>' + r.map(function (v, i) {
@@ -1061,7 +1061,6 @@
     root.innerHTML =
       '<div class="rb-app">' +
       '<header class="rb-top">' +
-      '<a class="rb-back" href="./index.html">← Griha</a>' +
       '<h1>Report <span>Studio</span></h1>' +
       '<span class="rb-privacy">🔒 100% on-device · no upload · no data stored</span>' +
       '<nav class="rb-tabs">' +
