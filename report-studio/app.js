@@ -10,6 +10,7 @@
   const E = window.RBEngine;
   const TPL_KEY = 'reportstudio.templates.v1';
   const DRAFT_KEY = 'reportstudio.draft.v1';
+  const PREFS_KEY = 'reportstudio.prefs.v1';
   const PREVIEW_ROWS = 100;
 
   if (window.pdfjsLib) {
@@ -44,14 +45,108 @@
   /* ══════════════ state ══════════════ */
 
   const state = {
-    tab: 'files',
-    sources: [],            // [{id(=unique name), name, fileName, kind, fields:[{name,type}], rows:[{}], note}]
+    tab: 'home',
+    sources: [],            // [{id(=unique name), name, fileName, kind, fields:[{name,type}], rows:[{}], note, cleanup}]
+    pdfFiles: [],           // PDF workspace: [{id, name, bytes, pageCount, pages:[{n, rot, del}]}]
     report: newReport(),
     templates: loadTemplates(),
     activeTemplateId: null,
     editable: true,          // false when a locked template is loaded and not yet unlocked
-    exportFormat: 'xlsx'
+    exportFormat: 'xlsx',
+    prefs: loadPrefs()
   };
+
+  /* ══════════════ personalisation ══════════════ */
+
+  const ACCENTS = ['#f4b63f', '#5eead4', '#7dd3fc', '#fda4af', '#c4b5fd', '#bef264'];
+  const BG_PRESETS = [['none', 'Plain dark'], ['dusk', 'Dusk'], ['forest', 'Forest'], ['ocean', 'Ocean'], ['ember', 'Ember']];
+  const BG_CSS = {
+    dusk: 'radial-gradient(1200px 700px at 80% -10%, rgba(147,112,219,.28), transparent 60%), radial-gradient(900px 600px at 10% 110%, rgba(244,182,63,.16), transparent 60%), #080808',
+    forest: 'radial-gradient(1200px 700px at 85% -10%, rgba(52,153,110,.30), transparent 60%), radial-gradient(900px 600px at 5% 110%, rgba(110,231,183,.12), transparent 60%), #070a08',
+    ocean: 'radial-gradient(1200px 700px at 80% -10%, rgba(56,130,246,.26), transparent 60%), radial-gradient(900px 600px at 10% 110%, rgba(125,211,252,.14), transparent 60%), #06080c',
+    ember: 'radial-gradient(1200px 700px at 80% -10%, rgba(239,88,68,.24), transparent 60%), radial-gradient(900px 600px at 10% 110%, rgba(244,182,63,.18), transparent 60%), #0b0705'
+  };
+
+  function loadPrefs() {
+    try { return Object.assign({ name: '', accent: '#f4b63f', bg: 'none', photo: null }, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')); }
+    catch (e) { return { name: '', accent: '#f4b63f', bg: 'none', photo: null }; }
+  }
+  function savePrefs() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(state.prefs)); }
+    catch (e) { toast('Could not save preferences — the photo may be too large for browser storage.', true); }
+  }
+  function applyPrefs() {
+    const p = state.prefs;
+    document.documentElement.style.setProperty('--primary', p.accent || '#f4b63f');
+    document.body.classList.toggle('rb-photo-bg', !!p.photo);
+    if (p.photo) {
+      document.body.style.background =
+        'linear-gradient(rgba(6,6,6,.78), rgba(6,6,6,.9)), url(' + p.photo + ') center / cover fixed no-repeat';
+    } else if (p.bg && p.bg !== 'none' && BG_CSS[p.bg]) {
+      document.body.style.background = BG_CSS[p.bg];
+      document.body.style.backgroundAttachment = 'fixed';
+    } else {
+      document.body.style.background = '#080808';
+    }
+  }
+
+  function openPersonalizeModal() {
+    const p = state.prefs;
+    const m = openModal(
+      '<h3>Make it yours</h3>' +
+      '<p class="sub">Shown on your home screen and applied everywhere. Stored only in this browser.</p>' +
+      '<label class="rb-field-label">Your name</label>' +
+      '<input class="rb-input" id="pz-name" placeholder="e.g. Ganesh" value="' + esc(p.name) + '" />' +
+      '<label class="rb-field-label">Accent colour</label>' +
+      '<div class="rb-swatches">' + ACCENTS.map(function (c) {
+        return '<button class="rb-swatch' + (p.accent === c ? ' sel' : '') + '" data-accent="' + c + '" style="background:' + c + '"></button>';
+      }).join('') +
+      '<input type="color" id="pz-color" value="' + esc(p.accent) + '" title="Custom colour" /></div>' +
+      '<label class="rb-field-label">Background</label>' +
+      '<div class="rb-bg-row">' + BG_PRESETS.map(function (b) {
+        return '<button class="rb-bg-opt' + (p.bg === b[0] && !p.photo ? ' sel' : '') + '" data-bg="' + b[0] + '">' + b[1] + '</button>';
+      }).join('') + '</div>' +
+      '<label class="rb-field-label">Personal photo wallpaper</label>' +
+      '<div class="rb-row" style="margin-top:2px">' +
+      '<button class="rb-btn sm" id="pz-photo-btn">📷 ' + (p.photo ? 'Change photo' : 'Upload a photo') + '</button>' +
+      (p.photo ? '<button class="rb-btn sm ghost danger" id="pz-photo-rm">Remove photo</button>' : '') +
+      '<input type="file" id="pz-photo" accept="image/*" style="display:none" /></div>' +
+      '<p class="rb-inline-note">The photo is shrunk and kept in this browser only — it never leaves your device.</p>' +
+      '<div class="acts"><button class="rb-btn ghost" id="pz-close">Done</button></div>'
+    );
+    function refresh() { closeModal(); applyPrefs(); render(); openPersonalizeModal(); }
+    $$('[data-accent]', m).forEach(function (b) {
+      b.onclick = function () { p.accent = b.getAttribute('data-accent'); savePrefs(); refresh(); };
+    });
+    $('#pz-color', m).onchange = function (e) { p.accent = e.target.value; savePrefs(); refresh(); };
+    $$('[data-bg]', m).forEach(function (b) {
+      b.onclick = function () { p.bg = b.getAttribute('data-bg'); p.photo = null; savePrefs(); refresh(); };
+    });
+    $('#pz-name', m).oninput = function (e) { p.name = e.target.value.trim(); savePrefs(); };
+    $('#pz-photo-btn', m).onclick = function () { $('#pz-photo', m).click(); };
+    $('#pz-photo', m).onchange = function (e) {
+      const f = e.target.files[0];
+      if (!f) return;
+      const img = new Image();
+      const url = URL.createObjectURL(f);
+      img.onload = function () {
+        const max = 1600;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * scale);
+        cv.height = Math.round(img.height * scale);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        p.photo = cv.toDataURL('image/jpeg', 0.78);
+        savePrefs(); refresh();
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); toast('Could not read that image.', true); };
+      img.src = url;
+    };
+    const rm = $('#pz-photo-rm', m);
+    if (rm) rm.onclick = function () { p.photo = null; savePrefs(); refresh(); };
+    $('#pz-close', m).onclick = function () { closeModal(); applyPrefs(); render(); };
+  }
 
   function newReport() {
     return {
@@ -130,7 +225,45 @@
   function addSource(name, fileName, kind, fields, rows, note) {
     const finalName = uniqueSourceName(name);
     const typed = E.inferTypes(fields, rows);
-    state.sources.push({ id: finalName, name: finalName, fileName: fileName, kind: kind, fields: typed, rows: rows, note: note || '' });
+    state.sources.push({
+      id: finalName, name: finalName, fileName: fileName, kind: kind,
+      fields: typed, rows: rows, note: note || '', cleanup: analyzeRows(fields, rows)
+    });
+  }
+
+  /* Cleaning: spot blank and duplicate rows on import, fix only when asked. */
+  function analyzeRows(fields, rows) {
+    let blank = 0, dupes = 0;
+    const seen = new Set();
+    for (const r of rows) {
+      if (fields.every(function (f) { return E.isBlank(r[f]); })) { blank++; continue; }
+      const key = JSON.stringify(fields.map(function (f) { return r[f] instanceof Date ? r[f].toISOString() : r[f]; }));
+      if (seen.has(key)) dupes++; else seen.add(key);
+    }
+    return (blank || dupes) ? { blank: blank, dupes: dupes } : null;
+  }
+
+  function cleanSource(sourceId, what) {
+    const src = state.sources.find(function (s) { return s.id === sourceId; });
+    if (!src) return;
+    const fields = src.fields.map(function (f) { return f.name; });
+    const before = src.rows.length;
+    if (what === 'blank' || what === 'both') {
+      src.rows = src.rows.filter(function (r) { return !fields.every(function (f) { return E.isBlank(r[f]); }); });
+    }
+    if (what === 'dupes' || what === 'both') {
+      const seen = new Set();
+      src.rows = src.rows.filter(function (r) {
+        const key = JSON.stringify(fields.map(function (f) { return r[f] instanceof Date ? r[f].toISOString() : r[f]; }));
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+    src.cleanup = analyzeRows(fields, src.rows);
+    toast('Removed ' + (before - src.rows.length) + ' rows from ' + src.name + '.');
+    touch();
+    render();
   }
 
   function handleFiles(fileList) {
@@ -846,12 +979,25 @@
     return [head].concat(rows);
   }
 
+  /* Convert flow swaps in its own name/title; report exports use the live report. */
+  let exportMeta = null;
+  function getMeta() {
+    return exportMeta || {
+      name: state.report.name || 'Report',
+      title: (state.report.options && state.report.options.title) || state.report.name || 'Report'
+    };
+  }
+
   function doExport() {
-    const fmt = state.exportFormat;
     const res = exportRows();
     if (!res) return;
     const fname = ($('#ex-name') ? $('#ex-name').value.trim() : '') || slug(state.report.name) + '-' + new Date().toISOString().slice(0, 10);
     const pw = $('#ex-pass') ? $('#ex-pass').value : '';
+    const delim = $('#ex-delim') ? $('#ex-delim').value : ',';
+    exportResult(state.exportFormat, res, fname, pw, delim);
+  }
+
+  function exportResult(fmt, res, fname, pw, delim) {
     const fdef = FORMATS.find(function (f) { return f.id === fmt; });
     if (pw && (!fdef || !fdef.lockable)) {
       toast('Password protection is available for Excel and PDF only.', true);
@@ -859,7 +1005,7 @@
     }
     try {
       if (fmt === 'xlsx') return exportXlsx(res, fname, pw);
-      if (fmt === 'csv') return exportDelimited(res, fname + '.csv', $('#ex-delim') ? $('#ex-delim').value : ',', 'text/csv');
+      if (fmt === 'csv') return exportDelimited(res, fname + '.csv', delim || ',', 'text/csv');
       if (fmt === 'tsv') return exportDelimited(res, fname + '.tsv', '\t', 'text/tab-separated-values');
       if (fmt === 'txt') return exportText(res, fname + '.txt', '\t');
       if (fmt === 'prn') return exportPrn(res, fname + '.prn');
@@ -884,7 +1030,7 @@
         return { wch: Math.min(50, w + 2) };
       });
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, (state.report.name || 'Report').slice(0, 31).replace(/[\\/?*[\]:]/g, ' ') || 'Report');
+      XLSX.utils.book_append_sheet(wb, ws, (getMeta().name || 'Report').slice(0, 31).replace(/[\\/?*[\]:]/g, ' ') || 'Report');
       XLSX.writeFile(wb, fname + '.xlsx');
       toast('Excel file downloaded.');
       return;
@@ -965,7 +1111,7 @@
     const opts = { orientation: landscape ? 'landscape' : 'portrait', unit: 'pt', format: 'a4' };
     if (pw) opts.encryption = { userPassword: pw, ownerPassword: pw, userPermissions: ['print'] };
     const doc = new jsPDF(opts);
-    const title = state.report.options.title || state.report.name || 'Report';
+    const title = getMeta().title;
     doc.setFontSize(15);
     doc.text(title, 40, 42);
     doc.setFontSize(8.5);
@@ -994,7 +1140,7 @@
 
   function exportHtml(res, filename) {
     const m = formattedMatrix(res);
-    const title = esc(state.report.options.title || state.report.name || 'Report');
+    const title = esc(getMeta().title);
     const html = '<!doctype html><html><head><meta charset="utf-8"><title>' + title + '</title><style>' +
       'body{font-family:system-ui,sans-serif;margin:32px;color:#111}h1{font-size:20px}' +
       'table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #ddd;padding:6px 10px;text-align:left}' +
@@ -1035,7 +1181,7 @@
         return '    <' + tag(c.label) + '>' + esc(v) + '</' + tag(c.label) + '>';
       }).join('\n') + '\n  </row>';
     }).join('\n');
-    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<report name="' + esc(state.report.name) + '">\n' + rowsXml + '\n</report>\n';
+    const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<report name="' + esc(getMeta().name) + '">\n' + rowsXml + '\n</report>\n';
     downloadBlob(new Blob([xml], { type: 'application/xml' }), filename);
     toast(filename + ' downloaded.');
   }
@@ -1064,8 +1210,9 @@
       '<h1>Report <span>Studio</span></h1>' +
       '<span class="rb-privacy">🔒 100% on-device · no upload · no data stored</span>' +
       '<nav class="rb-tabs">' +
-      tabBtn('files', '1', 'Files') + tabBtn('build', '2', 'Build') +
-      tabBtn('export', '3', 'Export') + tabBtn('saved', '4', 'Saved reports') +
+      tabBtn('home', '⌂ Home') + tabBtn('files', 'Files') + tabBtn('build', 'Build') +
+      tabBtn('export', 'Export') + tabBtn('convert', 'Convert') +
+      tabBtn('pdf', 'PDF tools') + tabBtn('saved', 'Saved') +
       '</nav></header>' +
       '<main id="rb-main"></main>' +
       '</div><div id="rb-toast"></div>';
@@ -1073,14 +1220,76 @@
       b.onclick = function () { state.tab = b.getAttribute('data-tab'); render(); };
     });
     const main = $('#rb-main');
-    if (state.tab === 'files') renderFiles(main);
+    if (state.tab === 'home') renderHome(main);
+    else if (state.tab === 'files') renderFiles(main);
     else if (state.tab === 'build') { renderBuildShell(main); renderBuild(); }
     else if (state.tab === 'export') renderExport(main);
+    else if (state.tab === 'convert') renderConvert(main);
+    else if (state.tab === 'pdf') renderPdfTools(main);
     else renderSaved(main);
   }
 
-  function tabBtn(id, n, label) {
-    return '<button class="rb-tab' + (state.tab === id ? ' active' : '') + '" data-tab="' + id + '"><span class="n">' + n + '</span>' + label + '</button>';
+  function tabBtn(id, label) {
+    return '<button class="rb-tab' + (state.tab === id ? ' active' : '') + '" data-tab="' + id + '">' + label + '</button>';
+  }
+
+  /* ── Home tab ── */
+
+  function goTo(tab) { state.tab = tab; render(); }
+
+  function renderHome(main) {
+    const p = state.prefs;
+    const hello = p.name ? 'Welcome, ' + esc(p.name) : 'Welcome';
+    const cards = [
+      ['build-report', '📊', 'Build a report', 'Combine files, drag fields, add formulas and lookups, shape the output.'],
+      ['convert', '🔄', 'Convert files', 'Excel ⇆ CSV ⇆ PDF ⇆ JSON and more — pick a file, pick a format, done.'],
+      ['pdf', '📑', 'PDF tools', 'Merge, split, reorder, rotate, extract pages, or pull tables into Excel.'],
+      ['transform', '🔀', 'Transform data', 'Load a file and start shaping it straight away — clean, filter, calculate.'],
+      ['saved', '📁', 'Open a saved report', state.templates.length
+        ? state.templates.length + ' saved design' + (state.templates.length > 1 ? 's' : '') + ' ready to run again.'
+        : 'Designs you save appear here for one-tap reuse.']
+    ];
+    main.innerHTML =
+      '<section class="rb-hero">' +
+      '<div><h2 class="rb-hello">' + hello + ' <span class="wave">👋</span></h2>' +
+      '<p class="rb-hello-sub">What do you want to do today?</p></div>' +
+      '<button class="rb-btn sm ghost" id="rb-personalize">🎨 Personalise</button>' +
+      '</section>' +
+      '<div class="rb-home-grid">' + cards.map(function (c) {
+        return '<button class="rb-home-card" data-go="' + c[0] + '">' +
+          '<span class="hc-icon">' + c[1] + '</span>' +
+          '<span class="hc-title">' + c[2] + '</span>' +
+          '<span class="hc-desc">' + c[3] + '</span></button>';
+      }).join('') + '</div>' +
+      '<p class="rb-inline-note" style="text-align:center;margin-top:26px">🔒 Everything happens on this device — files are never uploaded and never stored.</p>';
+    $('#rb-personalize', main).onclick = openPersonalizeModal;
+    $$('[data-go]', main).forEach(function (b) {
+      b.onclick = function () {
+        const go = b.getAttribute('data-go');
+        if (go === 'build-report') goTo(state.sources.length ? 'build' : 'files');
+        else if (go === 'transform') startQuickTransform();
+        else goTo(go);
+      };
+    });
+  }
+
+  /* Transform data: jump straight into Build with every field of a file laid out. */
+  function startQuickTransform(sourceId) {
+    if (!state.sources.length) {
+      goTo('files');
+      toast('Add a file first — then Transform lays all its fields out for shaping.');
+      return;
+    }
+    const src = state.sources.find(function (s) { return s.id === sourceId; }) || state.sources[0];
+    state.report = newReport();
+    state.report.name = src.name + ' — transformed';
+    state.report.primarySourceId = src.id;
+    state.activeTemplateId = null;
+    state.editable = true;
+    src.fields.forEach(function (f) { addColumnFromField(src.id, f.name); });
+    saveDraft();
+    goTo('build');
+    toast('All ' + src.fields.length + ' fields of ' + src.name + ' are on the canvas — clean, filter, calculate, export.');
   }
 
   /* ── Files tab ── */
@@ -1133,6 +1342,16 @@
         '<div class="fmeta">' + esc(s.fileName) + ' · ' + s.rows.length.toLocaleString() + ' rows · ' + s.fields.length + ' fields</div>' +
         '</div><button class="fx" data-remove="' + esc(s.id) + '" title="Remove">✕</button></div>' +
         (s.note ? '<div class="rb-warn">' + esc(s.note) + '</div>' : '') +
+        (s.cleanup ? '<div class="rb-cleanup">🧹 Found ' +
+          [s.cleanup.blank ? s.cleanup.blank + ' blank row' + (s.cleanup.blank > 1 ? 's' : '') : '',
+           s.cleanup.dupes ? s.cleanup.dupes + ' duplicate row' + (s.cleanup.dupes > 1 ? 's' : '') : '']
+            .filter(Boolean).join(' and ') + '. Remove?' +
+          '<div class="rb-row" style="margin-top:6px">' +
+          (s.cleanup.blank ? '<button class="rb-btn sm" data-clean-blank="' + esc(s.id) + '">Remove blank</button>' : '') +
+          (s.cleanup.dupes ? '<button class="rb-btn sm" data-clean-dupes="' + esc(s.id) + '">Remove duplicates</button>' : '') +
+          (s.cleanup.blank && s.cleanup.dupes ? '<button class="rb-btn sm primary" data-clean-both="' + esc(s.id) + '">Remove both</button>' : '') +
+          '<button class="rb-btn sm ghost" data-clean-keep="' + esc(s.id) + '">Keep as is</button>' +
+          '</div></div>' : '') +
         '<div class="rb-file-fields">' + s.fields.map(function (f) {
           return '<span class="rb-chip ' + f.type + '">' + esc(f.name) + '</span>';
         }).join('') + '</div></div>';
@@ -1142,6 +1361,17 @@
         const id = b.getAttribute('data-remove');
         state.sources = state.sources.filter(function (s) { return s.id !== id; });
         render();
+      };
+    });
+    [['data-clean-blank', 'blank'], ['data-clean-dupes', 'dupes'], ['data-clean-both', 'both']].forEach(function (pair) {
+      $$('[' + pair[0] + ']', cards).forEach(function (b) {
+        b.onclick = function () { cleanSource(b.getAttribute(pair[0]), pair[1]); };
+      });
+    });
+    $$('[data-clean-keep]', cards).forEach(function (b) {
+      b.onclick = function () {
+        const src = state.sources.find(function (s) { return s.id === b.getAttribute('data-clean-keep'); });
+        if (src) { src.cleanup = null; render(); }
       };
     });
   }
@@ -1484,12 +1714,32 @@
       $('#rb-goto-build', main).onclick = function () { state.tab = 'build'; render(); };
       return;
     }
-    const res = E.runReport(state.sources, state.report, { limit: 1 });
+    const res = E.runReport(state.sources, state.report, {});
     const fdef = FORMATS.find(function (f) { return f.id === state.exportFormat; });
+    const health = healthChecks(res);
+    const previewRows = res.rows.slice(0, 8);
     main.innerHTML =
       '<div class="rb-card"><div class="rb-section-head"><h2>Export “' + esc(r.name) + '”</h2>' +
       '<span class="rb-count">' + (res.fullCount || 0).toLocaleString() + ' rows × ' + r.columns.length + ' columns</span></div>' +
       '<p class="rb-hint">The file is generated in your browser and saved straight to your Downloads — it never touches a server.</p>' +
+
+      '<div class="rb-health"><div class="rb-health-head">Report health' +
+      (health.some(function (h) { return h.level !== 'ok'; })
+        ? '<span class="rb-health-badge warn">' + health.filter(function (h) { return h.level !== 'ok'; }).length + ' to review</span>'
+        : '<span class="rb-health-badge ok">all clear</span>') + '</div>' +
+      health.map(function (h) {
+        const icon = h.level === 'bad' ? '❌' : (h.level === 'warn' ? '⚠️' : '✅');
+        return '<div class="rb-health-item ' + h.level + '">' + icon + ' ' + esc(h.msg) + '</div>';
+      }).join('') + '</div>' +
+
+      (res.columns.length && previewRows.length
+        ? '<label class="rb-field-label">Preview — exactly what the file will contain (first ' + previewRows.length + ' of ' + (res.fullCount || 0).toLocaleString() + ' rows)</label>' +
+          '<div class="rb-preview-wrap"><table class="rb-table"><thead><tr>' +
+          res.columns.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          previewRows.map(function (row) {
+            return '<tr>' + row.map(function (v, i) { return '<td>' + esc(E.formatValue(v, res.columns[i])) + '</td>'; }).join('') + '</tr>';
+          }).join('') + '</tbody></table></div>'
+        : '') +
       '<div class="rb-formats">' + FORMATS.map(function (f) {
         return '<button class="rb-format' + (state.exportFormat === f.id ? ' sel' : '') + '" data-fmt="' + f.id + '">' +
           (f.lockable ? '<span class="lock-ico">🔐</span>' : '') +
@@ -1554,8 +1804,422 @@
     $$('[data-t-del]', main).forEach(function (b) { b.onclick = function () { deleteTemplate(b.getAttribute('data-t-del')); }; });
   }
 
+  /* ══════════════ report health ══════════════ */
+
+  function healthChecks(res) {
+    const items = [];
+    const r = state.report;
+    if (r.primarySourceId && !state.sources.some(function (s) { return s.id === r.primarySourceId; })) {
+      items.push({ level: 'bad', msg: 'Base file "' + r.primarySourceId + '" is not loaded — add it on the Files tab.' });
+    }
+    res.errors.forEach(function (e) { items.push({ level: 'bad', msg: e }); });
+    (res.linkStats || []).forEach(function (ls) {
+      if (ls.missing) items.push({ level: 'bad', msg: 'Linked file "' + ls.source + '" is not loaded — its lookup columns will be blank.' });
+      else if (ls.unmatched > 0) items.push({ level: 'warn', msg: ls.unmatched + ' of ' + ls.total + ' rows found no match in "' + ls.source + '" — their lookup values are blank.' });
+      else items.push({ level: 'ok', msg: 'Every row matched in "' + ls.source + '".' });
+    });
+    const seenLabels = {};
+    let dup = 0;
+    r.columns.forEach(function (c) {
+      const k = String(c.label).toLowerCase();
+      if (seenLabels[k]) dup++;
+      seenLabels[k] = 1;
+    });
+    if (dup) items.push({ level: 'warn', msg: dup + ' duplicate column heading' + (dup > 1 ? 's' : '') + ' — rename in column settings (⚙).' });
+    const emptyCols = [];
+    res.columns.forEach(function (c, i) {
+      if (res.rows.length && res.rows.every(function (row) { return E.isBlank(row[i]); })) emptyCols.push(c.label);
+    });
+    if (emptyCols.length) items.push({ level: 'warn', msg: 'Always-empty column' + (emptyCols.length > 1 ? 's' : '') + ': ' + emptyCols.join(', ') + ' — check the field mapping or formula.' });
+    if (!res.rows.length) items.push({ level: 'warn', msg: 'The report has 0 rows right now — check the filters and loaded files.' });
+    if (!items.length) items.push({ level: 'ok', msg: 'No issues found — mappings, formulas and lookups all resolve.' });
+    return items;
+  }
+
+  /* ══════════════ Convert tab ══════════════ */
+
+  function allFieldsReport(src) {
+    return {
+      primarySourceId: src.id, links: [], filters: [], sort: [], groupBy: null,
+      options: { totalsRow: false, title: src.name },
+      columns: src.fields.map(function (f) {
+        return {
+          id: uid(), kind: 'field', sourceId: src.id, field: f.name, label: f.name,
+          format: 'auto', decimals: 2, align: f.type === 'number' ? 'right' : 'left',
+          agg: 'first', total: false, width: 0
+        };
+      })
+    };
+  }
+
+  function convertSource(sourceId, fmt, pw) {
+    const src = state.sources.find(function (s) { return s.id === sourceId; });
+    if (!src) return;
+    const res = E.runReport(state.sources, allFieldsReport(src), {});
+    if (!res.rows.length) { toast('No rows to convert in ' + src.name + '.', true); return; }
+    exportMeta = { name: src.name, title: src.name };
+    try {
+      exportResult(fmt, res, slug(src.name) + '-' + new Date().toISOString().slice(0, 10), pw || '', ',');
+    } finally {
+      exportMeta = null;
+    }
+  }
+
+  function renderConvert(main) {
+    main.innerHTML =
+      '<div class="rb-card"><div class="rb-section-head"><h2>Convert files</h2></div>' +
+      '<p class="rb-hint">Drop a file, pick the output format, download. Every sheet or table becomes its own convertible item. ' +
+      'PDFs are converted via table extraction — for page-level work (merge, split, rotate) use <b>PDF tools</b>.</p>' +
+      '<div class="rb-drop rb-drop-sm" id="cv-drop"><h2>Drop files to convert</h2>' +
+      '<p>Excel · CSV · TSV · TXT · ODS · JSON · PDF</p>' +
+      '<input type="file" id="cv-file-input" multiple style="display:none" accept=".xlsx,.xls,.xlsm,.csv,.tsv,.txt,.prn,.pdf,.json,.ods" /></div></div>' +
+      (state.sources.length
+        ? '<div class="rb-card"><div class="rb-section-head"><h2>Loaded files</h2></div>' +
+          state.sources.map(function (s) {
+            return '<div class="rb-convert-row" data-cv="' + esc(s.id) + '">' +
+              '<div class="cv-name"><b>' + esc(s.name) + '</b><span class="rb-count"> ' + s.rows.length.toLocaleString() + ' rows · ' + s.fields.length + ' fields</span></div>' +
+              '<select class="rb-select cv-fmt">' + FORMATS.map(function (f) {
+                return '<option value="' + f.id + '">' + esc(f.name) + '</option>';
+              }).join('') + '</select>' +
+              '<input class="rb-input cv-pass" type="password" placeholder="Password (Excel/PDF only)" autocomplete="new-password" />' +
+              '<button class="rb-btn sm primary cv-go">⬇ Convert</button>' +
+              '<button class="rb-btn sm ghost cv-shape">Shape in Build →</button>' +
+              '</div>';
+          }).join('') + '</div>'
+        : '<div class="rb-empty-state"><h2>No files loaded yet</h2><p>Drop files above — conversion happens instantly on this device.</p></div>');
+    const drop = $('#cv-drop', main);
+    const input = $('#cv-file-input', main);
+    drop.onclick = function () { input.click(); };
+    input.onchange = function () { handleFiles(input.files); input.value = ''; };
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('drag'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+    });
+    $$('.rb-convert-row', main).forEach(function (row) {
+      const id = row.getAttribute('data-cv');
+      $('.cv-go', row).onclick = function () {
+        convertSource(id, $('.cv-fmt', row).value, $('.cv-pass', row).value);
+      };
+      $('.cv-shape', row).onclick = function () { startQuickTransform(id); };
+    });
+  }
+
+  /* ══════════════ PDF workspace ══════════════ */
+
+  const THUMB_CAP = 60;      // thumbnails rendered per PDF
+  const IMAGE_EXPORT_CAP = 30;
+
+  function stripExt(n) { return String(n).replace(/\.[^.]+$/, ''); }
+
+  function pdfAddFiles(fileList) {
+    const files = Array.prototype.slice.call(fileList).filter(function (f) { return /\.pdf$/i.test(f.name); });
+    if (!files.length) { toast('Pick PDF files for the PDF workspace.', true); return; }
+    if (!window.pdfjsLib) { toast('PDF engine not loaded.', true); return; }
+    let pending = files.length;
+    files.forEach(function (f) {
+      f.arrayBuffer().then(function (buf) {
+        return window.pdfjsLib.getDocument({ data: buf.slice(0) }).promise.then(function (doc) {
+          state.pdfFiles.push({
+            id: uid(), name: f.name, bytes: buf, pageCount: doc.numPages, thumbs: {},
+            pages: Array.apply(null, { length: doc.numPages }).map(function (_, i) { return { n: i, rot: 0, del: false }; })
+          });
+          doc.destroy();
+        });
+      }).catch(function (e) {
+        toast('Could not read ' + f.name + ': ' + (e && e.message ? e.message : e), true);
+      }).then(function () {
+        if (--pending === 0) render();
+      });
+    });
+  }
+
+  function pdfFile(id) { return state.pdfFiles.find(function (p) { return p.id === id; }); }
+
+  function keptPages(pf) { return pf.pages.filter(function (p) { return !p.del; }); }
+
+  function pdfApplyEdits(fileId) {
+    const pf = pdfFile(fileId);
+    if (!pf || !window.PDFLib) return;
+    const keep = keptPages(pf);
+    if (!keep.length) { toast('All pages are marked deleted — undelete at least one.', true); return; }
+    PDFLib.PDFDocument.load(pf.bytes).then(function (src) {
+      return PDFLib.PDFDocument.create().then(function (out) {
+        return out.copyPages(src, keep.map(function (p) { return p.n; })).then(function (copied) {
+          copied.forEach(function (pg, i) {
+            if (keep[i].rot) pg.setRotation(PDFLib.degrees((pg.getRotation().angle + keep[i].rot) % 360));
+            out.addPage(pg);
+          });
+          return out.save();
+        });
+      });
+    }).then(function (bytes) {
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), stripExt(pf.name) + '-edited.pdf');
+      toast('Edited PDF downloaded (' + keep.length + ' pages).');
+    }).catch(function (e) { toast('PDF edit failed: ' + e.message, true); });
+  }
+
+  function pdfMergeAll() {
+    if (state.pdfFiles.length < 2) { toast('Load at least two PDFs to merge.', true); return; }
+    if (!window.PDFLib) { toast('PDF engine not loaded.', true); return; }
+    PDFLib.PDFDocument.create().then(function (out) {
+      let chain = Promise.resolve();
+      state.pdfFiles.forEach(function (pf) {
+        chain = chain.then(function () {
+          return PDFLib.PDFDocument.load(pf.bytes).then(function (src) {
+            const keep = keptPages(pf);
+            return out.copyPages(src, keep.map(function (p) { return p.n; })).then(function (copied) {
+              copied.forEach(function (pg, i) {
+                if (keep[i].rot) pg.setRotation(PDFLib.degrees((pg.getRotation().angle + keep[i].rot) % 360));
+                out.addPage(pg);
+              });
+            });
+          });
+        });
+      });
+      return chain.then(function () { return out.save(); });
+    }).then(function (bytes) {
+      downloadBlob(new Blob([bytes], { type: 'application/pdf' }), 'merged.pdf');
+      toast('Merged PDF downloaded — files combined in list order.');
+    }).catch(function (e) { toast('Merge failed: ' + e.message, true); });
+  }
+
+  function parsePageRange(str, max) {
+    const out = [];
+    String(str).split(',').forEach(function (part) {
+      part = part.trim();
+      if (!part) return;
+      const m = part.match(/^(\d+)\s*-\s*(\d+)$/);
+      if (m) {
+        for (let i = Number(m[1]); i <= Number(m[2]); i++) if (i >= 1 && i <= max) out.push(i - 1);
+      } else if (/^\d+$/.test(part)) {
+        const i = Number(part);
+        if (i >= 1 && i <= max) out.push(i - 1);
+      }
+    });
+    return out;
+  }
+
+  function pdfExtractPages(fileId) {
+    const pf = pdfFile(fileId);
+    if (!pf || !window.PDFLib) return;
+    const m = openModal(
+      '<h3>Extract pages from ' + esc(pf.name) + '</h3>' +
+      '<p class="sub">This PDF has ' + pf.pageCount + ' pages. List the pages you want, e.g. <code class="k">1-3, 7, 12</code></p>' +
+      '<label class="rb-field-label">Pages</label><input class="rb-input" id="xp-range" placeholder="1-3, 7" />' +
+      '<div class="acts"><button class="rb-btn ghost" id="xp-cancel">Cancel</button>' +
+      '<button class="rb-btn primary" id="xp-go">Extract</button></div>'
+    );
+    $('#xp-cancel', m).onclick = closeModal;
+    $('#xp-go', m).onclick = function () {
+      const idx = parsePageRange($('#xp-range', m).value, pf.pageCount);
+      if (!idx.length) { toast('No valid pages in that range.', true); return; }
+      closeModal();
+      PDFLib.PDFDocument.load(pf.bytes).then(function (src) {
+        return PDFLib.PDFDocument.create().then(function (out) {
+          return out.copyPages(src, idx).then(function (copied) {
+            copied.forEach(function (pg) { out.addPage(pg); });
+            return out.save();
+          });
+        });
+      }).then(function (bytes) {
+        downloadBlob(new Blob([bytes], { type: 'application/pdf' }), stripExt(pf.name) + '-pages.pdf');
+        toast(idx.length + ' pages extracted.');
+      }).catch(function (e) { toast('Extract failed: ' + e.message, true); });
+    };
+  }
+
+  function pdfSplit(fileId) {
+    const pf = pdfFile(fileId);
+    if (!pf || !window.PDFLib) return;
+    const keep = keptPages(pf);
+    if (keep.length > 20 && !window.confirm('This will download ' + keep.length + ' separate PDF files (your browser may ask to allow multiple downloads). Continue?')) return;
+    PDFLib.PDFDocument.load(pf.bytes).then(function (src) {
+      let chain = Promise.resolve();
+      keep.forEach(function (p, i) {
+        chain = chain.then(function () {
+          return PDFLib.PDFDocument.create().then(function (out) {
+            return out.copyPages(src, [p.n]).then(function (copied) {
+              out.addPage(copied[0]);
+              return out.save();
+            }).then(function (bytes) {
+              downloadBlob(new Blob([bytes], { type: 'application/pdf' }), stripExt(pf.name) + '-p' + (p.n + 1) + '.pdf');
+            });
+          });
+        });
+      });
+      return chain;
+    }).then(function () { toast('Split into ' + keep.length + ' single-page PDFs.'); })
+      .catch(function (e) { toast('Split failed: ' + e.message, true); });
+  }
+
+  function pdfToImages(fileId) {
+    const pf = pdfFile(fileId);
+    if (!pf || !window.pdfjsLib) return;
+    const keep = keptPages(pf).slice(0, IMAGE_EXPORT_CAP);
+    if (keptPages(pf).length > IMAGE_EXPORT_CAP) toast('Converting the first ' + IMAGE_EXPORT_CAP + ' pages.', true);
+    window.pdfjsLib.getDocument({ data: pf.bytes.slice(0) }).promise.then(function (doc) {
+      let chain = Promise.resolve();
+      keep.forEach(function (p) {
+        chain = chain.then(function () {
+          return doc.getPage(p.n + 1).then(function (page) {
+            const vp = page.getViewport({ scale: 2, rotation: (page.rotate + p.rot) % 360 });
+            const cv = document.createElement('canvas');
+            cv.width = vp.width; cv.height = vp.height;
+            return page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function () {
+              return new Promise(function (resolve) {
+                cv.toBlob(function (blob) {
+                  downloadBlob(blob, stripExt(pf.name) + '-p' + (p.n + 1) + '.png');
+                  resolve();
+                }, 'image/png');
+              });
+            });
+          });
+        });
+      });
+      return chain.then(function () { doc.destroy(); });
+    }).then(function () { toast(keep.length + ' page image' + (keep.length > 1 ? 's' : '') + ' downloaded.'); })
+      .catch(function (e) { toast('Image export failed: ' + e.message, true); });
+  }
+
+  function pdfToData(fileId) {
+    const pf = pdfFile(fileId);
+    if (!pf) return;
+    parseFile({ name: pf.name, arrayBuffer: function () { return Promise.resolve(pf.bytes.slice(0)); } })
+      .then(function () {
+        render();
+        toast('Table extracted from ' + pf.name + ' — find it under Files, Convert, or Build.');
+      })
+      .catch(function (e) { toast('Extraction failed: ' + e.message, true); });
+  }
+
+  function renderPdfTools(main) {
+    main.innerHTML =
+      '<div class="rb-card"><div class="rb-section-head"><h2>PDF tools</h2><div class="spacer"></div>' +
+      (state.pdfFiles.length > 1 ? '<button class="rb-btn sm primary" id="pt-merge">⬇ Merge all (' + state.pdfFiles.length + ' files, in this order)</button>' : '') +
+      '</div>' +
+      '<p class="rb-hint">Merge, reorder, rotate, delete and extract pages, turn pages into images, or pull tables into Excel — all on this device. ' +
+      'Edits below are applied when you download; the original files are untouched.</p>' +
+      '<div class="rb-drop rb-drop-sm" id="pt-drop"><h2>Drop PDFs here</h2><p>or click to browse</p>' +
+      '<input type="file" id="pt-file-input" multiple style="display:none" accept=".pdf" /></div></div>' +
+      state.pdfFiles.map(function (pf, fi) {
+        return '<div class="rb-card" data-pt="' + pf.id + '">' +
+          '<div class="rb-section-head"><h2>📑 ' + esc(pf.name) + '</h2>' +
+          '<span class="rb-count">' + keptPages(pf).length + ' of ' + pf.pageCount + ' pages kept</span><div class="spacer"></div>' +
+          (state.pdfFiles.length > 1 ? '<button class="rb-btn sm ghost" data-pt-up="' + pf.id + '"' + (fi === 0 ? ' disabled' : '') + '>↑</button>' +
+            '<button class="rb-btn sm ghost" data-pt-down="' + pf.id + '"' + (fi === state.pdfFiles.length - 1 ? ' disabled' : '') + '>↓</button>' : '') +
+          '<button class="rb-btn sm ghost danger" data-pt-rm="' + pf.id + '">Remove</button></div>' +
+          '<div class="rb-row">' +
+          '<button class="rb-btn sm primary" data-pt-apply="' + pf.id + '">⬇ Download edited PDF</button>' +
+          '<button class="rb-btn sm" data-pt-extract="' + pf.id + '">Extract pages…</button>' +
+          '<button class="rb-btn sm" data-pt-split="' + pf.id + '">Split to single pages</button>' +
+          '<button class="rb-btn sm" data-pt-img="' + pf.id + '">Pages → images</button>' +
+          '<button class="rb-btn sm" data-pt-data="' + pf.id + '">Table → Excel/data</button>' +
+          '</div>' +
+          '<div class="rb-page-grid">' + pf.pages.map(function (p, pi) {
+            return '<div class="rb-page' + (p.del ? ' del' : '') + '">' +
+              (pf.thumbs[p.n]
+                ? '<img src="' + pf.thumbs[p.n] + '" style="transform:rotate(' + p.rot + 'deg)" alt="page ' + (p.n + 1) + '" />'
+                : '<canvas data-thumb="' + pf.id + ':' + p.n + '" style="transform:rotate(' + p.rot + 'deg)"></canvas>') +
+              '<div class="pg-label">p.' + (p.n + 1) + (p.rot ? ' ⟳' + p.rot + '°' : '') + (p.del ? ' · deleted' : '') + '</div>' +
+              '<div class="pg-acts">' +
+              '<button title="Move left" data-pg-left="' + pf.id + ':' + pi + '"' + (pi === 0 ? ' disabled' : '') + '>←</button>' +
+              '<button title="Move right" data-pg-right="' + pf.id + ':' + pi + '"' + (pi === pf.pages.length - 1 ? ' disabled' : '') + '>→</button>' +
+              '<button title="Rotate 90°" data-pg-rot="' + pf.id + ':' + pi + '">⟳</button>' +
+              '<button title="' + (p.del ? 'Restore page' : 'Delete page') + '" data-pg-del="' + pf.id + ':' + pi + '">' + (p.del ? '↩' : '🗑') + '</button>' +
+              '</div></div>';
+          }).join('') + '</div>' +
+          (pf.pageCount > THUMB_CAP ? '<p class="rb-inline-note">Previews shown for the first ' + THUMB_CAP + ' pages; all pages are still processed.</p>' : '') +
+          '</div>';
+      }).join('');
+
+    const drop = $('#pt-drop', main);
+    const input = $('#pt-file-input', main);
+    drop.onclick = function () { input.click(); };
+    input.onchange = function () { pdfAddFiles(input.files); input.value = ''; };
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add('drag'); });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+      drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove('drag'); });
+    });
+    drop.addEventListener('drop', function (e) {
+      if (e.dataTransfer && e.dataTransfer.files) pdfAddFiles(e.dataTransfer.files);
+    });
+    const mergeBtn = $('#pt-merge', main);
+    if (mergeBtn) mergeBtn.onclick = pdfMergeAll;
+
+    function wire(attr, fn) {
+      $$('[' + attr + ']', main).forEach(function (b) {
+        b.onclick = function () { fn(b.getAttribute(attr)); };
+      });
+    }
+    wire('data-pt-apply', pdfApplyEdits);
+    wire('data-pt-extract', pdfExtractPages);
+    wire('data-pt-split', pdfSplit);
+    wire('data-pt-img', pdfToImages);
+    wire('data-pt-data', pdfToData);
+    wire('data-pt-rm', function (id) {
+      state.pdfFiles = state.pdfFiles.filter(function (p) { return p.id !== id; });
+      render();
+    });
+    wire('data-pt-up', function (id) {
+      const i = state.pdfFiles.findIndex(function (p) { return p.id === id; });
+      if (i > 0) { const t = state.pdfFiles[i - 1]; state.pdfFiles[i - 1] = state.pdfFiles[i]; state.pdfFiles[i] = t; render(); }
+    });
+    wire('data-pt-down', function (id) {
+      const i = state.pdfFiles.findIndex(function (p) { return p.id === id; });
+      if (i >= 0 && i < state.pdfFiles.length - 1) { const t = state.pdfFiles[i + 1]; state.pdfFiles[i + 1] = state.pdfFiles[i]; state.pdfFiles[i] = t; render(); }
+    });
+    function pageOp(attr, fn) {
+      $$('[' + attr + ']', main).forEach(function (b) {
+        b.onclick = function () {
+          const parts = b.getAttribute(attr).split(':');
+          const pf = pdfFile(parts[0]);
+          if (pf) { fn(pf, Number(parts[1])); render(); }
+        };
+      });
+    }
+    pageOp('data-pg-left', function (pf, i) { const t = pf.pages[i - 1]; pf.pages[i - 1] = pf.pages[i]; pf.pages[i] = t; });
+    pageOp('data-pg-right', function (pf, i) { const t = pf.pages[i + 1]; pf.pages[i + 1] = pf.pages[i]; pf.pages[i] = t; });
+    pageOp('data-pg-rot', function (pf, i) { pf.pages[i].rot = (pf.pages[i].rot + 90) % 360; });
+    pageOp('data-pg-del', function (pf, i) { pf.pages[i].del = !pf.pages[i].del; });
+
+    renderPdfThumbs(main);
+  }
+
+  /* Render page thumbnails once per file and cache them as data URLs. */
+  function renderPdfThumbs(main) {
+    if (!window.pdfjsLib) return;
+    state.pdfFiles.forEach(function (pf) {
+      const pending = $$('[data-thumb^="' + pf.id + ':"]', main).slice(0, THUMB_CAP);
+      if (!pending.length) return;
+      window.pdfjsLib.getDocument({ data: pf.bytes.slice(0) }).promise.then(function (doc) {
+        let chain = Promise.resolve();
+        pending.forEach(function (cv) {
+          const n = Number(cv.getAttribute('data-thumb').split(':')[1]);
+          chain = chain.then(function () {
+            return doc.getPage(n + 1).then(function (page) {
+              const vp = page.getViewport({ scale: 92 / page.getViewport({ scale: 1 }).width });
+              cv.width = vp.width; cv.height = vp.height;
+              return page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function () {
+                pf.thumbs[n] = cv.toDataURL('image/jpeg', 0.7);
+              });
+            }).catch(function () { /* keep blank thumb on render failure */ });
+          });
+        });
+        return chain.then(function () { doc.destroy(); });
+      }).catch(function () { /* thumbnails are best-effort */ });
+    });
+  }
+
   /* ══════════════ boot ══════════════ */
 
   loadDraft();
+  applyPrefs();
   render();
 })();

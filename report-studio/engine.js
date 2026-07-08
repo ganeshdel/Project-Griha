@@ -662,6 +662,19 @@
       });
     }
 
+    // link health: how many base rows found no match in each linked file
+    const linkStats = [];
+    for (const l of (report.links || [])) {
+      const lsrc = sources.find(function (s) { return s.id === l.sourceId; });
+      if (!lsrc) { linkStats.push({ source: l.sourceId, missing: true, unmatched: 0, total: baseRows.length }); continue; }
+      const lidx = getIndex(l.sourceId, l.foreignKey);
+      let un = 0;
+      for (const br of baseRows) {
+        if (!lidx.has(normKey(valueOf(br, l.localKey)))) un++;
+      }
+      linkStats.push({ source: lsrc.name, missing: false, unmatched: un, total: baseRows.length });
+    }
+
     // totals
     let totals = null;
     if (report.options && report.options.totalsRow) {
@@ -675,9 +688,9 @@
 
     if (opts.limit && rows.length > opts.limit) {
       warnings.push('Preview shows first ' + opts.limit + ' of ' + rows.length + ' rows.');
-      return { columns: cols, rows: rows.slice(0, opts.limit), fullCount: rows.length, totals: totals, warnings: warnings, errors: errors };
+      return { columns: cols, rows: rows.slice(0, opts.limit), fullCount: rows.length, totals: totals, warnings: warnings, errors: errors, linkStats: linkStats };
     }
-    return { columns: cols, rows: rows, fullCount: rows.length, totals: totals, warnings: warnings, errors: errors };
+    return { columns: cols, rows: rows, fullCount: rows.length, totals: totals, warnings: warnings, errors: errors, linkStats: linkStats };
   }
 
   function defaultAgg(col) {

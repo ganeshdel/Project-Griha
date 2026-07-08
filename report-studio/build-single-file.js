@@ -16,7 +16,7 @@ const app = read('app.js').replace(
   'window.pdfjsLib.GlobalWorkerOptions.workerSrc = window.__pdfWorkerUrl;'
 );
 const worker = read('vendor/pdf.worker.min.js');
-const vendors = ['xlsx.full.min.js', 'pdf.min.js', 'jspdf.umd.min.js', 'jspdf.plugin.autotable.min.js', 'xlsx-populate.min.js']
+const vendors = ['xlsx.full.min.js', 'pdf.min.js', 'jspdf.umd.min.js', 'jspdf.plugin.autotable.min.js', 'xlsx-populate.min.js', 'pdf-lib.min.js']
   .map(f => read('vendor/' + f));
 
 for (const src of [css, engine, app, worker, ...vendors]) {

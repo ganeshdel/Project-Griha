@@ -19,12 +19,15 @@ Any of these work:
 
 ## What it does
 
-1. **Files** — drop any number of `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, `.ods`, `.json` files, plus best-effort table extraction from `.pdf`. Multi-sheet workbooks become one source per sheet. Field types (text / number / date) are auto-detected.
+0. **Home** — a personalisable start screen ("Welcome, ⟨your name⟩ — what do you want to do today?") with large task cards: Build a report, Convert files, PDF tools, Transform data, Open a saved report. The 🎨 Personalise panel sets your name, accent colour, background theme, or a personal photo wallpaper (shrunk and stored only in this browser).
+1. **Files** — drop any number of `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, `.ods`, `.json` files, plus best-effort table extraction from `.pdf`. Multi-sheet workbooks become one source per sheet. Field types (text / number / date) are auto-detected. If an import contains blank or duplicate rows, the tool asks whether to remove them — it never cleans silently.
 2. **Build** — every field from every file appears in a palette. Drag fields (or click them) onto the canvas to compose report columns; drag chips to reorder. Per-column settings: heading, format (number / currency / percent / date), decimals, alignment, fixed width for PRN.
    - **Cross-file joins**: the first time you use a field from a second file, pick the matching key once (like a VLOOKUP) — after that all its fields join automatically.
    - **Formula columns**: Excel-style expressions with `[Field]` references — arithmetic, `IF`, text and math functions, `LOOKUP(...)`, `SUMIF(...)`, `COUNTMATCH(...)` (self-lookup / duplicate counting on unique fields), and whole-column aggregates like `COLSUM` (e.g. `[Amount] / COLSUM("Amount")`). Live result preview while you type.
    - **Shaping**: filters, multi-level sort, group-by with per-column aggregation (sum, average, min, max, count, count distinct, join), and a totals row.
-3. **Export** — Excel, CSV (pick a delimiter), TSV, PDF, PRN fixed-width, TXT, HTML, JSON, XML, Markdown. Excel and PDF outputs can be **encrypted with an open-password** (the file asks for the password when opened).
+3. **Export** — Excel, CSV (pick a delimiter), TSV, PDF, PRN fixed-width, TXT, HTML, JSON, XML, Markdown. Excel and PDF outputs can be **encrypted with an open-password** (the file asks for the password when opened). Before you download, a **Report health** panel flags formula errors, unmatched lookup rows, duplicate headings and always-empty columns, and a preview table shows exactly what the file will contain.
+3b. **Convert** — one-step file conversion without building a report: drop a file, pick any output format, download. Each sheet/table converts independently; "Shape in Build" jumps into the full builder with every field laid out.
+3c. **PDF tools** — a page-level PDF workspace: merge files (in list order), reorder / rotate / delete pages with thumbnail previews, extract page ranges, split to single pages, convert pages to PNG images, or pull tables into Excel/data. All edits apply on download; originals are untouched.
 4. **Saved reports** — save the report *design* (columns, formulas, links, filters — never any data) in the browser for reuse; load fresh files next month and run it again. Designs can be exported/imported as a settings JSON file to share. Lock a saved design with a password (PBKDF2-hashed) so others on the machine can run it but not change or delete it.
 
 ## Privacy by design
