@@ -23,8 +23,18 @@ for (const src of [css, engine, app, worker, ...vendors]) {
   if (src.includes('</script')) throw new Error('inline safety: found </script in a source file');
 }
 
+// static fallback shown until the app code takes over; stays visible in
+// viewers that display files without running scripts (e.g. in-app previews)
+const fallback =
+  '<div id="rb-root"><div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center">' +
+  '<div style="max-width:420px"><div style="font-size:2.2rem;margin-bottom:14px">📊</div>' +
+  '<h1 style="font-size:1.3rem;margin-bottom:10px">Report Studio is loading…</h1>' +
+  '<p style="color:rgba(255,255,255,.6);font-size:.9rem;line-height:1.6">If this message doesn\'t go away, ' +
+  'this viewer can only display files, not run apps. Save this file and open it in a web browser — ' +
+  'Chrome, Edge, or Safari on a computer works best.</p></div></div></div>';
+
 const body =
-  '<div class="grain"></div>\n<div id="rb-root"></div>\n' +
+  '<div class="grain"></div>\n' + fallback + '\n' +
   '<script type="text/plain" id="pdfjs-worker-code">\n' + worker + '\n</script>\n' +
   vendors.map(v => '<script>\n' + v + '\n</script>').join('\n') +
   '\n<script>\n(function () {\n' +

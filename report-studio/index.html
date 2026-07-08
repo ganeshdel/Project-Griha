@@ -10,7 +10,20 @@
   </head>
   <body>
     <div class="grain"></div>
-    <div id="rb-root"></div>
+    <div id="rb-root">
+      <!-- Replaced by the app the moment its code runs. If this stays visible,
+           the current viewer blocks scripts (e.g. in-app file previews). -->
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;text-align:center">
+        <div style="max-width:420px">
+          <div style="font-size:2.2rem;margin-bottom:14px">📊</div>
+          <h1 style="font-size:1.3rem;margin-bottom:10px">Report Studio is loading…</h1>
+          <p style="color:rgba(255,255,255,.6);font-size:.9rem;line-height:1.6">
+            If this message doesn't go away, this viewer can only display files, not run apps.
+            Save this file and open it in a web browser — Chrome, Edge, or Safari on a computer works best.
+          </p>
+        </div>
+      </div>
+    </div>
 
     <!-- All libraries are vendored locally: this page makes zero network calls for your data. -->
     <script src="./vendor/xlsx.full.min.js"></script>
