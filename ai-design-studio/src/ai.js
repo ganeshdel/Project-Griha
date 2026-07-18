@@ -11,7 +11,7 @@
 // ============================================================
 
 import { footprint, overlaps, openingSegment, roomArea, fmtLen } from './model.js';
-import { catalogItem } from './catalog.js';
+import { catalogItem, CATALOG } from './catalog.js';
 import { theme } from './themes.js';
 
 const KEY_STORE = 'ads.anthropicKey';
@@ -275,6 +275,78 @@ export function mentorReplyOffline(question, p) {
     return `The most useful thing I can tell you right now: ${issues[0].title.toLowerCase()}. ${issues[0].detail} ${issues.length > 1 ? `There ${issues.length - 1 === 1 ? 'is one more issue' : 'are ' + (issues.length - 1) + ' more issues'} in the Assistant tab.` : ''}`;
   }
   return `This layout is in good shape — circulation is clear and nothing is out of scale. Questions I can help with: making the room feel bigger, wall colours for ${th.name}, lighting placement, budget trade-offs, or what to buy first. You can also connect an Anthropic API key in Settings for a fully conversational mentor.`;
+}
+
+// ---------- Real reconstruction from an uploaded plan / photo ----------
+// Sends the image to Claude (user's own key) and asks for a strict-JSON
+// description of the room: dimensions, openings and furniture mapped to
+// the app's catalog. Returns null if no key is connected.
+
+export async function reconstructFromClaude(dataURL) {
+  const key = getApiKey();
+  if (!key) return null;
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataURL);
+  if (!m) throw new Error('Unsupported image encoding');
+  const [, mediaType, b64] = m;
+
+  const catalogIds = CATALOG.map((c) => `${c.id} (${c.name}, ${c.w}×${c.d} mm)`).join(', ');
+  const sys = `You reconstruct rooms from floor plans or room photos for an interior design app.
+Respond with ONLY a JSON object, no markdown fences, no prose. Schema:
+{
+ "roomType": "living" | "bedroom" | "kitchen" | "studio",
+ "name": string,
+ "w": number, "l": number, "h": number,
+ "note": string,
+ "openings": [ { "type": "door"|"window", "wall": 0|1|2|3, "offset": number, "width": number, "sill": number, "height": number } ],
+ "furniture": [ { "catalogId": string, "x": number, "y": number, "rot": 0|90|180|270 } ]
+}
+Coordinates: room interior origin at top-left of the plan, x right, y down, all mm. Walls: 0=top, 1=right, 2=bottom, 3=left. "offset" is distance along that wall from its origin corner. Furniture x,y is the item's top-left corner. Only use these catalogIds (pick the closest match, skip items with no reasonable match): ${catalogIds}.
+If the image contains several rooms, reconstruct the largest habitable one. If dimensions are not labelled, estimate from door widths (~900 mm) and typical proportions and say so in "note".`;
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 1500,
+      system: sys,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text', text: 'Reconstruct this room. JSON only.' },
+        ],
+      }],
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${t.slice(0, 140)}`);
+  }
+  const data = await res.json();
+  const raw = (data.content || []).map((b) => b.text || '').join('').trim()
+    .replace(/^```(json)?/i, '').replace(/```$/, '').trim();
+  let d;
+  try { d = JSON.parse(raw); } catch { throw new Error('Claude returned an unreadable reconstruction'); }
+
+  const clampNum = (v, lo, hi, dflt) => (Number.isFinite(+v) ? Math.max(lo, Math.min(hi, Math.round(+v))) : dflt);
+  return {
+    templateId: ['living', 'bedroom', 'kitchen', 'studio'].includes(d.roomType) ? d.roomType : 'living',
+    name: typeof d.name === 'string' && d.name.trim() ? d.name.trim().slice(0, 40) : null,
+    w: clampNum(d.w, 1800, 15000, 4800),
+    l: clampNum(d.l, 1800, 15000, 3900),
+    h: clampNum(d.h, 2200, 4500, 2700),
+    note: typeof d.note === 'string' ? d.note.slice(0, 300) : 'Reconstructed from your image.',
+    layout: {
+      openings: Array.isArray(d.openings) ? d.openings.slice(0, 8) : [],
+      furniture: Array.isArray(d.furniture) ? d.furniture.slice(0, 20) : [],
+    },
+  };
 }
 
 // Online mentor: direct browser call with the user's own key.

@@ -8,7 +8,7 @@ import { TEMPLATES, createProject, placeFromCatalog, loadProjects, saveProject, 
 import { CATALOG, CATEGORIES, catalogItem } from './catalog.js';
 import { THEMES, theme } from './themes.js';
 import { render2D, bindEditor2D } from './editor2d.js';
-import { analyzeProject, mentorReplyOffline, mentorReplyClaude, getApiKey, setApiKey } from './ai.js';
+import { analyzeProject, mentorReplyOffline, mentorReplyClaude, reconstructFromClaude, getApiKey, setApiKey } from './ai.js';
 import { estimate, renovationStages, billOfMaterials, shoppingSuggestions, contractorSummaryHTML, TIERS } from './budget.js';
 
 const root = document.getElementById('root');
@@ -103,10 +103,10 @@ function launcherHTML() {
       <p class="hero-sub">Upload a room photo or floor plan. Get an editable 2D and interactive 3D version in seconds. Redesign your space with AI.</p>
 
       <div class="dropzone" id="dropzone">
-        <input type="file" id="fileInput" accept="image/*,.pdf" hidden />
+        <input type="file" id="fileInput" accept="image/*" hidden />
         <div class="dz-icon">⇪</div>
         <div class="dz-title">Drop a room photo or floor plan</div>
-        <div class="dz-sub">photo · floor plan · sketch · PDF · scan</div>
+        <div class="dz-sub">photo · floor plan image · sketch · scan (JPG/PNG)</div>
         <button class="primary-btn" data-act="browse">Choose a file</button>
       </div>
 
@@ -579,6 +579,9 @@ const actions = {
       name: root.querySelector('#confName').value || 'My room',
       w, l, h,
       source: S.uploadPreview ? 'photo' : 'template',
+      // Use the AI-detected openings/furniture only if the user kept the
+      // detected room type — switching type means the layout no longer applies.
+      layout: root.querySelector('#confTpl').value === S.detected?.templateId ? S.detected?.layout : null,
     });
     saveProject(S.project);
     enterWorkspace();
@@ -709,32 +712,63 @@ function enterWorkspace() {
 // ---------- Photo / plan analysis (honest reconstruction) ----------
 
 async function startAnalysis(file) {
-  S.uploadPreview = null;
-  if (file.type.startsWith('image/')) {
+  try {
+    S.uploadPreview = null;
+    const isImage = file.type.startsWith('image/');
+    const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+
+    if (!isImage && isPdf) {
+      // Be honest: the app can't read PDF geometry yet. Ask for an image
+      // instead of silently handing back a canned template.
+      toast('PDF plans aren’t supported yet — please upload a photo, screenshot or image export (JPG/PNG) of the plan.');
+      return;
+    }
+    if (!isImage) {
+      toast('That file type isn’t supported — please upload a JPG or PNG of the room or plan.');
+      return;
+    }
+
     S.uploadPreview = await readAsDataURL(file);
-  }
-  S.screen = 'analyzing';
-  S.analyzeStep = 0;
-  renderApp();
-
-  // Estimate room characteristics from the image itself (aspect ratio +
-  // brightness heuristics), then let the user confirm every number.
-  const est = S.uploadPreview ? await estimateFromImage(S.uploadPreview) : {
-    templateId: 'living', w: 4800, l: 3900, h: 2750,
-    note: 'I read your plan document and prepared a standard living room shell to refine.',
-  };
-
-  for (let i = 1; i <= ANALYZE_STEPS.length; i++) {
-    await sleep(520 + Math.random() * 320);
-    S.analyzeStep = i;
-    if (S.screen !== 'analyzing') return; // user navigated away
+    S.screen = 'analyzing';
+    S.analyzeStep = 0;
     renderApp();
+
+    // Kick off the real work while the step animation plays.
+    // With an Anthropic key connected: genuine reconstruction via Claude vision.
+    // Without a key: transparent local heuristic (and we say so).
+    const work = (async () => {
+      if (getApiKey()) {
+        try {
+          const r = await reconstructFromClaude(S.uploadPreview);
+          if (r) return { ...r, viaClaude: true };
+        } catch (err) {
+          const h = await estimateFromImage(S.uploadPreview);
+          return { ...h, note: `Claude analysis failed (${err.message}) — showing a rough local estimate instead. ${h.note}` };
+        }
+      }
+      const h = await estimateFromImage(S.uploadPreview);
+      return { ...h, note: `${h.note} (Local estimate only — connect an Anthropic API key in Settings and I’ll actually read the plan: walls, doors, windows and furniture.)` };
+    })();
+    work.catch(() => {});
+
+    for (let i = 1; i <= ANALYZE_STEPS.length; i++) {
+      await sleep(520 + Math.random() * 320);
+      S.analyzeStep = i;
+      if (S.screen !== 'analyzing') return;
+      renderApp();
+    }
+    const est = await work;
+    if (S.screen !== 'analyzing') return;
+    const t = TEMPLATES.find((x) => x.id === est.templateId);
+    S.detected = { ...est, name: est.name || t.name };
+    S.screen = 'confirm';
+    renderApp();
+  } catch (err) {
+    S.screen = 'launcher';
+    S.uploadPreview = null;
+    renderApp();
+    toast(`Couldn’t read that file (${err?.message || 'unknown error'}). Try a JPG or PNG under ~10 MB.`);
   }
-  await sleep(420);
-  const t = TEMPLATES.find((x) => x.id === est.templateId);
-  S.detected = { ...est, name: t.name };
-  S.screen = 'confirm';
-  renderApp();
 }
 
 async function estimateFromImage(dataURL) {
@@ -798,7 +832,7 @@ async function sendChat() {
 
 function esc(s) { return String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
-function readAsDataURL(file) { return new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(file); }); }
-function loadImage(src) { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; }); }
+function readAsDataURL(file) { return new Promise((r, j) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.onerror = () => j(new Error('file could not be read')); fr.readAsDataURL(file); }); }
+function loadImage(src) { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = () => j(new Error('image could not be decoded — HEIC and some formats aren’t supported by every browser')); i.src = src; }); }
 
 renderApp();
