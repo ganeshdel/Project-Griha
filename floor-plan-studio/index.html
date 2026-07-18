@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Floor Plan Studio · Project Griha</title>
+  <style>
+    :root{--bg:#f4f6f8;--panel:#fff;--ink:#17212b;--muted:#687482;--line:#d7dde3;--accent:#176b5b;--accent2:#e7f3ef;--danger:#b42318}
+    *{box-sizing:border-box} body{margin:0;font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink)}
+    button,input,select{font:inherit} button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-rows:auto 1fr}
+    header{height:64px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;gap:16px}
+    .brand{font-weight:800;font-size:18px}.brand span{color:var(--accent)}.sub{color:var(--muted);font-size:12px}
+    .tabs,.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:10px;padding:8px 12px}.btn:hover{border-color:#9aa6b2}.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}.btn.on{background:var(--accent2);border-color:var(--accent);color:var(--accent)}.btn.danger{color:var(--danger)}
+    main{min-height:0;display:grid;grid-template-columns:310px 1fr}.side{background:#fff;border-right:1px solid var(--line);padding:16px;overflow:auto}.stage{position:relative;min-width:0;min-height:0;overflow:hidden}
+    h2{font-size:14px;margin:18px 0 8px}.card{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff}.drop{border:1.5px dashed #9aa6b2;border-radius:14px;padding:18px;text-align:center;background:#fafbfc}.drop strong{display:block;margin-bottom:4px}.drop.drag{border-color:var(--accent);background:var(--accent2)}
+    label{display:block;margin:10px 0 4px;font-size:12px;color:var(--muted)}input[type=range]{width:100%}input[type=number],select{width:100%;border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.note{font-size:12px;color:var(--muted)}.status{border-left:3px solid var(--accent);padding:9px 10px;background:var(--accent2);border-radius:8px;margin:10px 0}.metric{display:flex;justify-content:space-between;border-bottom:1px solid #edf0f2;padding:6px 0}.metric:last-child{border:0}
+    #canvas2d,#view3d{position:absolute;inset:0;width:100%;height:100%;display:block;background:#eef1f3}.hidden{display:none!important}.floating{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:var(--muted);font-size:12px;pointer-events:none}.badge{display:inline-flex;padding:3px 7px;border-radius:999px;background:var(--accent2);color:var(--accent);font-size:11px;font-weight:700}.list{display:grid;gap:6px}.wallrow{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);border-radius:9px;padding:7px 8px}.wallrow button{border:0;background:none;color:var(--danger)}
+    @media(max-width:800px){main{grid-template-columns:1fr;grid-template-rows:auto minmax(520px,1fr)}.side{border-right:0;border-bottom:1px solid var(--line);max-height:46vh}header{height:auto;padding:12px;align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><div class="brand">Project Griha · <span>Floor Plan Studio</span></div><div class="sub">Local reconstruction · no API key required</div></div>
+    <div class="tabs">
+      <button class="btn on" id="tab2d">2D plan</button><button class="btn" id="tab3d">3D view</button>
+      <button class="btn" id="fitBtn">Fit</button><button class="btn" id="undoBtn">Undo</button><button class="btn" id="saveBtn">Save</button>
+    </div>
+  </header>
+  <main>
+    <aside class="side">
+      <div class="drop" id="drop"><strong>Upload a floor plan</strong><span class="note">PDF, JPG or PNG · first PDF page is used</span><br><button class="btn primary" id="chooseBtn" style="margin-top:10px">Choose file</button><input id="file" type="file" accept="application/pdf,image/*" hidden></div>
+      <div class="status" id="status">Upload a plan to begin. The detector finds long horizontal and vertical wall bands, then lets you correct the result.</div>
+      <h2>Reconstruction controls</h2>
+      <div class="card">
+        <label>Dark-pixel threshold <span id="thresholdVal">145</span></label><input id="threshold" type="range" min="60" max="230" value="145">
+        <label>Minimum wall length <span id="minLenVal">18%</span></label><input id="minLen" type="range" min="8" max="45" value="18">
+        <label>Source overlay opacity <span id="opacityVal">45%</span></label><input id="opacity" type="range" min="0" max="100" value="45">
+        <div class="row"><button class="btn primary" id="analyseBtn">Reconstruct</button><button class="btn" id="clearBtn">Clear walls</button></div>
+      </div>
+      <h2>Edit</h2>
+      <div class="card">
+        <div class="row"><button class="btn on" id="selectTool">Select</button><button class="btn" id="wallTool">Draw wall</button></div>
+        <label>Wall thickness (mm)</label><input id="thickness" type="number" min="50" max="500" value="150">
+        <label>Wall height (mm)</label><input id="height" type="number" min="1800" max="5000" value="2800">
+        <p class="note">Draw: click and drag. Select: click a wall, then drag either endpoint. Delete with the wall list or keyboard Delete.</p>
+      </div>
+      <h2>Detected model</h2>
+      <div class="card"><div class="metric"><span>Walls</span><strong id="wallCount">0</strong></div><div class="metric"><span>Horizontal</span><strong id="hCount">0</strong></div><div class="metric"><span>Vertical</span><strong id="vCount">0</strong></div><div class="metric"><span>Model scale</span><strong id="scaleLabel">Uncalibrated</strong></div></div>
+      <h2>Walls</h2><div class="list" id="wallList"></div>
+      <p class="note">V1 is an assisted reconstruction tool. It performs genuine local image analysis, but complex plans still need review and correction before measurements are relied upon.</p>
+    </aside>
+    <section class="stage">
+      <canvas id="canvas2d"></canvas><div id="view3d" class="hidden"></div>
+      <div class="floating" id="hint">2D: wheel/pinch to zoom · drag empty space to pan</div>
+    </section>
+  </main>
+</div>
+<script type="module">
+  const $=s=>document.querySelector(s); const canvas=$('#canvas2d'),ctx=canvas.getContext('2d');
+  const S={img:null,imgCanvas:null,walls:[],history:[],selected:null,tool:'select',view:'2d',zoom:1,panX:0,panY:0,drag:null,sourceName:'',three:null};
+  const uid=()=>Math.random().toString(36).slice(2,9); const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  function snapshot(){S.history.push(JSON.stringify(S.walls));if(S.history.length>30)S.history.shift()}
+  function setStatus(t){$('#status').textContent=t}
+  function resize(){const r=canvas.parentElement.getBoundingClientRect();canvas.width=Math.max(1,r.width*devicePixelRatio);canvas.height=Math.max(1,r.height*devicePixelRatio);canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';draw(); if(S.three)S.three.resize()}
+  new ResizeObserver(resize).observe(canvas.parentElement);
+  function fit(){if(!S.img)return;const cw=canvas.width/devicePixelRatio,ch=canvas.height/devicePixelRatio;S.zoom=Math.min(cw/S.img.width,ch/S.img.height)*.92;S.panX=(cw-S.img.width*S.zoom)/2;S.panY=(ch-S.img.height*S.zoom)/2;draw()}
+  function screenToImage(x,y){return{x:(x-S.panX)/S.zoom,y:(y-S.panY)/S.zoom}}
+  function draw(){const d=devicePixelRatio,cw=canvas.width/d,ch=canvas.height/d;ctx.setTransform(d,0,0,d,0,0);ctx.clearRect(0,0,cw,ch);ctx.fillStyle='#eef1f3';ctx.fillRect(0,0,cw,ch);ctx.save();ctx.translate(S.panX,S.panY);ctx.scale(S.zoom,S.zoom);
+    if(S.img){ctx.globalAlpha=Number($('#opacity').value)/100;ctx.drawImage(S.img,0,0);ctx.globalAlpha=1}
+    const inv=1/S.zoom;for(const w of S.walls){ctx.strokeStyle=w.id===S.selected?'#d92d20':'#176b5b';ctx.lineWidth=Math.max(2*inv,(w.t||150)/8*inv);ctx.lineCap='square';ctx.beginPath();ctx.moveTo(w.x1,w.y1);ctx.lineTo(w.x2,w.y2);ctx.stroke();if(w.id===S.selected){ctx.fillStyle='#fff';ctx.strokeStyle='#d92d20';for(const p of [[w.x1,w.y1],[w.x2,w.y2]]){ctx.beginPath();ctx.arc(p[0],p[1],7*inv,0,Math.PI*2);ctx.fill();ctx.stroke()}}}
+    if(S.drag?.kind==='new'){ctx.strokeStyle='#0b4f43';ctx.lineWidth=3*inv;ctx.setLineDash([8*inv,5*inv]);ctx.beginPath();ctx.moveTo(S.drag.x1,S.drag.y1);ctx.lineTo(S.drag.x2,S.drag.y2);ctx.stroke();ctx.setLineDash([])}ctx.restore();updateStats()}
+  async function loadFile(file){try{setStatus('Loading '+file.name+'…');let img;if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){const pdfjs=await import('https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs');pdfjs.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs';const pdf=await pdfjs.getDocument({data:await file.arrayBuffer()}).promise;const page=await pdf.getPage(1);const vp=page.getViewport({scale:2});const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;img=await canvasToImage(c)}else img=await fileToImage(file);S.img=img;S.sourceName=file.name;S.imgCanvas=document.createElement('canvas');S.imgCanvas.width=img.width;S.imgCanvas.height=img.height;S.imgCanvas.getContext('2d').drawImage(img,0,0);S.walls=[];S.selected=null;fit();setStatus('Plan loaded. Press Reconstruct, then review the detected walls.');}catch(e){setStatus('Could not open this file: '+e.message)}}
+  const fileToImage=f=>new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(new Error('image could not be decoded'));i.src=URL.createObjectURL(f)});const canvasToImage=c=>new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.src=c.toDataURL('image/png')});
+  function reconstruct(){if(!S.imgCanvas)return setStatus('Upload a plan first.');snapshot();const src=S.imgCanvas, max=900,ratio=Math.min(1,max/Math.max(src.width,src.height)),w=Math.round(src.width*ratio),h=Math.round(src.height*ratio);const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(src,0,0,w,h);const p=x.getImageData(0,0,w,h).data,thr=Number($('#threshold').value),dark=new Uint8Array(w*h);for(let i=0,j=0;i<p.length;i+=4,j++)dark[j]=(.299*p[i]+.587*p[i+1]+.114*p[i+2])<thr?1:0;
+    const rows=[],cols=[];for(let y=0;y<h;y++){let n=0;for(let xx=0;xx<w;xx++)n+=dark[y*w+xx];rows.push(n/w)}for(let xx=0;xx<w;xx++){let n=0;for(let y=0;y<h;y++)n+=dark[y*w+xx];cols.push(n/h)}
+    const rowBands=bands(rows,.11,2),colBands=bands(cols,.11,2),minFrac=Number($('#minLen').value)/100,newWalls=[];
+    for(const [a,b] of rowBands){const y=Math.round((a+b)/2);for(const [s,e] of runs(dark,w,h,'h',y,.55)){if((e-s)/w>=minFrac)newWalls.push({id:uid(),x1:s/ratio,y1:y/ratio,x2:e/ratio,y2:y/ratio,t:Number($('#thickness').value),h:Number($('#height').value)})}}
+    for(const [a,b] of colBands){const xx=Math.round((a+b)/2);for(const [s,e] of runs(dark,w,h,'v',xx,.55)){if((e-s)/h>=minFrac)newWalls.push({id:uid(),x1:xx/ratio,y1:s/ratio,x2:xx/ratio,y2:e/ratio,t:Number($('#thickness').value),h:Number($('#height').value)})}}
+    S.walls=dedupe(newWalls);S.selected=null;draw();setStatus(`Reconstruction produced ${S.walls.length} candidate walls. Use the overlay and editing tools to correct the model.`);if(S.view==='3d')build3D()}
+  function bands(v,cut,min){const out=[];let s=-1;for(let i=0;i<=v.length;i++){if(i<v.length&&v[i]>=cut){if(s<0)s=i}else if(s>=0){if(i-s>=min)out.push([s,i-1]);s=-1}}return out}
+  function runs(d,w,h,axis,pos,fill){const len=axis==='h'?w:h,out=[];let s=-1,gap=0;for(let i=0;i<=len;i++){let score=0;if(i<len){const r=3;for(let q=-r;q<=r;q++){const xx=axis==='h'?i:clamp(pos+q,0,w-1),yy=axis==='h'?clamp(pos+q,0,h-1):i;score+=d[yy*w+xx]}score/=7}if(i<len&&score>=fill){if(s<0)s=i;gap=0}else if(s>=0){gap++;if(gap>4){out.push([s,i-gap]);s=-1;gap=0}}}return out}
+  function dedupe(a){const o=[];for(const w of a){const hor=Math.abs(w.y2-w.y1)<Math.abs(w.x2-w.x1);const found=o.find(v=>hor===(Math.abs(v.y2-v.y1)<Math.abs(v.x2-v.x1))&&Math.hypot(w.x1-v.x1,w.y1-v.y1)<18&&Math.hypot(w.x2-v.x2,w.y2-v.y2)<18);if(!found)o.push(w)}return o.slice(0,350)}
+  function updateStats(){const h=S.walls.filter(w=>Math.abs(w.y2-w.y1)<Math.abs(w.x2-w.x1)).length;$('#wallCount').textContent=S.walls.length;$('#hCount').textContent=h;$('#vCount').textContent=S.walls.length-h;$('#wallList').innerHTML=S.walls.slice(0,60).map((w,i)=>`<div class="wallrow"><span>Wall ${i+1} <span class="badge">${Math.round(Math.hypot(w.x2-w.x1,w.y2-w.y1))} px</span></span><button data-del="${w.id}">Delete</button></div>`).join('');$('#wallList').querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{snapshot();S.walls=S.walls.filter(w=>w.id!==b.dataset.del);draw();if(S.view==='3d')build3D()})}
+  canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,p=screenToImage(sx,sy);if(S.tool==='wall'){snapshot();S.drag={kind:'new',x1:p.x,y1:p.y,x2:p.x,y2:p.y};return}const hit=nearest(p.x,p.y);if(hit){S.selected=hit.w.id;S.drag={kind:'endpoint',id:hit.w.id,end:hit.end}}else{S.selected=null;S.drag={kind:'pan',sx,sy,px:S.panX,py:S.panY}}draw()});
+  canvas.addEventListener('pointermove',e=>{if(!S.drag)return;const r=canvas.getBoundingClientRect(),sx=e.clientX-r.left,sy=e.clientY-r.top,p=screenToImage(sx,sy);if(S.drag.kind==='new'){const dx=Math.abs(p.x-S.drag.x1),dy=Math.abs(p.y-S.drag.y1);S.drag.x2=dx>dy?p.x:S.drag.x1;S.drag.y2=dx>dy?S.drag.y1:p.y}else if(S.drag.kind==='pan'){S.panX=S.drag.px+sx-S.drag.sx;S.panY=S.drag.py+sy-S.drag.sy}else if(S.drag.kind==='endpoint'){const w=S.walls.find(x=>x.id===S.drag.id);if(w){if(S.drag.end===1){w.x1=p.x;w.y1=p.y}else{w.x2=p.x;w.y2=p.y}}}draw()});
+  canvas.addEventListener('pointerup',()=>{if(S.drag?.kind==='new'&&Math.hypot(S.drag.x2-S.drag.x1,S.drag.y2-S.drag.y1)>8)S.walls.push({id:uid(),x1:S.drag.x1,y1:S.drag.y1,x2:S.drag.x2,y2:S.drag.y2,t:Number($('#thickness').value),h:Number($('#height').value)});S.drag=null;draw();if(S.view==='3d')build3D()});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();const r=canvas.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,b=screenToImage(mx,my),z=S.zoom*Math.exp(-e.deltaY*.001);S.zoom=clamp(z,.05,12);S.panX=mx-b.x*S.zoom;S.panY=my-b.y*S.zoom;draw()},{passive:false});
+  function nearest(x,y){let best=null,dist=12/S.zoom;for(const w of S.walls){for(const [end,px,py] of [[1,w.x1,w.y1],[2,w.x2,w.y2]]){const d=Math.hypot(x-px,y-py);if(d<dist){dist=d;best={w,end}}}const d=lineDist(x,y,w);if(d<dist){dist=d;best={w,end:Math.hypot(x-w.x1,y-w.y1)<Math.hypot(x-w.x2,y-w.y2)?1:2}}}return best}
+  function lineDist(px,py,w){const vx=w.x2-w.x1,vy=w.y2-w.y1,l=vx*vx+vy*vy;if(!l)return 999;const t=clamp(((px-w.x1)*vx+(py-w.y1)*vy)/l,0,1);return Math.hypot(px-(w.x1+t*vx),py-(w.y1+t*vy))}
+  async function init3D(){if(S.three)return;const THREE=await import('https://cdn.jsdelivr.net/npm/three@0.170.0/+esm');const {OrbitControls}=await import('https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js/+esm');const host=$('#view3d'),renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));host.appendChild(renderer.domElement);const scene=new THREE.Scene();scene.background=new THREE.Color(0xeef1f3);const cam=new THREE.PerspectiveCamera(50,1,.1,10000);cam.position.set(0,700,900);const controls=new OrbitControls(cam,renderer.domElement);controls.enableDamping=true;scene.add(new THREE.HemisphereLight(0xffffff,0x667788,2.2));const dl=new THREE.DirectionalLight(0xffffff,2);dl.position.set(500,900,400);scene.add(dl);const group=new THREE.Group();scene.add(group);function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,cam)}animate();S.three={THREE,renderer,scene,cam,controls,group,resize(){const r=host.getBoundingClientRect();renderer.setSize(r.width,r.height,false);cam.aspect=r.width/r.height||1;cam.updateProjectionMatrix()}};S.three.resize()}
+  async function build3D(){await init3D();const {THREE,group,controls,cam}=S.three;while(group.children.length)group.remove(group.children[0]);if(!S.img)return;const factor=1,ox=-S.img.width/2,oz=-S.img.height/2;const floor=new THREE.Mesh(new THREE.PlaneGeometry(S.img.width,S.img.height),new THREE.MeshStandardMaterial({color:0xf8f8f4,roughness:1}));floor.rotation.x=-Math.PI/2;floor.position.y=0;group.add(floor);for(const w of S.walls){const len=Math.hypot(w.x2-w.x1,w.y2-w.y1),height=(w.h||2800)/10,thick=Math.max(4,(w.t||150)/10);const m=new THREE.Mesh(new THREE.BoxGeometry(len*factor,height,thick),new THREE.MeshStandardMaterial({color:0xe8e2d8,roughness:.8}));m.position.set((w.x1+w.x2)/2+ox,height/2,(w.y1+w.y2)/2+oz);m.rotation.y=-Math.atan2(w.y2-w.y1,w.x2-w.x1);group.add(m)}controls.target.set(0,80,0);cam.position.set(0,Math.max(500,S.img.height*.65),Math.max(700,S.img.height*.85));controls.update()}
+  function setView(v){S.view=v;$('#tab2d').classList.toggle('on',v==='2d');$('#tab3d').classList.toggle('on',v==='3d');canvas.classList.toggle('hidden',v!=='2d');$('#view3d').classList.toggle('hidden',v!=='3d');$('#hint').textContent=v==='2d'?'2D: wheel/pinch to zoom · drag empty space to pan':'3D: drag to rotate · wheel/pinch to zoom · right-drag to pan';if(v==='3d')build3D()}
+  $('#chooseBtn').onclick=()=>$('#file').click();$('#file').onchange=e=>e.target.files[0]&&loadFile(e.target.files[0]);const drop=$('#drop');['dragenter','dragover'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>e.dataTransfer.files[0]&&loadFile(e.dataTransfer.files[0]));
+  $('#analyseBtn').onclick=reconstruct;$('#fitBtn').onclick=fit;$('#clearBtn').onclick=()=>{snapshot();S.walls=[];draw()};$('#undoBtn').onclick=()=>{if(S.history.length){S.walls=JSON.parse(S.history.pop());draw();if(S.view==='3d')build3D()}};$('#saveBtn').onclick=()=>{localStorage.setItem('griha.floorPlanStudio',JSON.stringify({walls:S.walls,sourceName:S.sourceName}));setStatus('Wall model saved in this browser. The uploaded source image is not stored.');};
+  $('#tab2d').onclick=()=>setView('2d');$('#tab3d').onclick=()=>setView('3d');$('#selectTool').onclick=()=>{S.tool='select';$('#selectTool').classList.add('on');$('#wallTool').classList.remove('on')};$('#wallTool').onclick=()=>{S.tool='wall';$('#wallTool').classList.add('on');$('#selectTool').classList.remove('on')};
+  for(const id of ['threshold','minLen','opacity'])$('#'+id).oninput=e=>{if(id==='threshold')$('#thresholdVal').textContent=e.target.value;if(id==='minLen')$('#minLenVal').textContent=e.target.value+'%';if(id==='opacity'){$('#opacityVal').textContent=e.target.value+'%';draw()}};
+  addEventListener('keydown',e=>{if(e.key==='Delete'&&S.selected){snapshot();S.walls=S.walls.filter(w=>w.id!==S.selected);S.selected=null;draw()}});const saved=localStorage.getItem('griha.floorPlanStudio');if(saved){try{S.walls=JSON.parse(saved).walls||[];setStatus('A saved wall model was restored. Upload its source plan again to restore the background overlay.')}catch{}}resize();
+</script>
+</body>
+</html>
