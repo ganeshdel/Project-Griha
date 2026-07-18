@@ -97,10 +97,15 @@ export const TEMPLATES = [
 
 // ---------- Project factory ----------
 
-export function createProject({ templateId = 'living', name, w, l, h, source = 'template' } = {}) {
+export function createProject({ templateId = 'living', name, w, l, h, source = 'template', layout = null } = {}) {
+  // `layout` (optional): AI-detected { openings:[{type,wall,offset,width,sill,height}],
+  // furniture:[{catalogId,x,y,rot}] } reconstructed from an uploaded plan/photo.
+  // When present it replaces the template's placements.
   const t = TEMPLATES.find((x) => x.id === templateId) || TEMPLATES[0];
   const sw = w || t.w, sl = l || t.l, sh = h || t.h;
   const sx = sw / t.w, sy = sl / t.l; // scale template placements into the confirmed room size
+  const srcOpenings = layout?.openings?.length ? layout.openings : null;
+  const srcFurniture = layout?.furniture?.length ? layout.furniture : null;
   const p = {
     id: uid(),
     name: name || t.name,
@@ -114,13 +119,27 @@ export function createProject({ templateId = 'living', name, w, l, h, source = '
       wallColor: '#eceae6',
       accentWallIndex: 0,
       floor: { material: 'Engineered oak', color: '#c8b294' },
-      openings: t.openings.map((o) => ({
-        id: uid(), sill: 0, height: o.type === 'door' ? 2100 : 1300, ...o,
-        offset: Math.round(o.offset * (o.wall % 2 === 0 ? sx : sy)),
-      })),
-      furniture: t.furniture
-        .map((f) => placeFromCatalog(f.catalogId, Math.round(f.x * sx), Math.round(f.y * sy), f.rot))
-        .filter(Boolean),
+      openings: srcOpenings
+        ? srcOpenings.map((o) => ({
+            id: uid(),
+            type: o.type === 'window' ? 'window' : 'door',
+            wall: [0, 1, 2, 3].includes(o.wall) ? o.wall : 0,
+            offset: Math.max(0, Math.round(o.offset || 0)),
+            width: Math.max(500, Math.min(3500, Math.round(o.width || (o.type === 'window' ? 1500 : 900)))),
+            sill: o.type === 'window' ? Math.max(0, Math.round(o.sill ?? 900)) : 0,
+            height: Math.max(400, Math.min(sh, Math.round(o.height || (o.type === 'window' ? 1300 : 2100)))),
+          }))
+        : t.openings.map((o) => ({
+            id: uid(), sill: 0, height: o.type === 'door' ? 2100 : 1300, ...o,
+            offset: Math.round(o.offset * (o.wall % 2 === 0 ? sx : sy)),
+          })),
+      furniture: srcFurniture
+        ? srcFurniture
+            .map((f) => placeFromCatalog(f.catalogId, Math.max(0, Math.round(f.x || 0)), Math.max(0, Math.round(f.y || 0)), [0, 45, 90, 135, 180, 225, 270, 315].includes(f.rot) ? f.rot : 0))
+            .filter(Boolean)
+        : t.furniture
+            .map((f) => placeFromCatalog(f.catalogId, Math.round(f.x * sx), Math.round(f.y * sy), f.rot))
+            .filter(Boolean),
       lighting: t.lighting.map((li) => ({ id: uid(), ...li, x: Math.round(li.x * sx), y: Math.round(li.y * sy) })),
     },
     beforeSnapshot: null, // captured before the first AI/theme change, for compare
